@@ -1,0 +1,63 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.14/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.14",
+  "version": "1.0.0",
+  "id": "00000000-0000-0000-0000-000000000000",
+  "packageName": "com.microsoft.teams.okrtree",
+  "developer": {
+    "name": "OKR Tree",
+    "websiteUrl": "https://www.example.com",
+    "privacyUrl": "https://www.example.com/privacy",
+    "termsOfUseUrl": "https://www.example.com/termsofuse"
+  },
+  "icons": {
+    "color": "teams/color.png",
+    "outline": "teams/outline.png"
+  },
+  "name": {
+    "short": "OKR Tree",
+    "full": "OKR Tree Manager"
+  },
+  "description": {
+    "short": "Visualize and manage your team's OKRs",
+    "full": "Track, visualize, and manage your team's Objectives and Key Results in a tree structure for better goal management and visibility."
+  },
+  "accentColor": "#6264A7",
+  "configurableTabs": [
+    {
+      "configurationUrl": "https://{yourAppDomain}/config",
+      "canUpdateConfiguration": true,
+      "scopes": [
+        "team",
+        "groupchat"
+      ]
+    }
+  ],
+  "staticTabs": [
+    {
+      "entityId": "dashboard",
+      "name": "Dashboard",
+      "contentUrl": "https://{yourAppDomain}/",
+      "websiteUrl": "https://{yourAppDomain}/",
+      "scopes": [
+        "personal"
+      ]
+    },
+    {
+      "entityId": "tasks",
+      "name": "Your Tasks",
+      "contentUrl": "https://{yourAppDomain}/tasks",
+      "websiteUrl": "https://{yourAppDomain}/tasks",
+      "scopes": [
+        "personal"
+      ]
+    }
+  ],
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ],
+  "validDomains": [
+    "{yourAppDomain}"
+  ]
+} 
