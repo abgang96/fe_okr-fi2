@@ -1,7 +1,1 @@
-{
-  "/_app": "pages/_app.js",
-  "/_error": "pages/_error.js",
-  "/_document": "pages/_document.js",
-  "/": "pages/index.js",
-  "/weekly-discussions": "pages/weekly-discussions.js"
-}
+{"/api/auth/microsoft/token":"pages/api/auth/microsoft/token.js","/_app":"pages/_app.js","/_error":"pages/_error.js","/auth/debug":"pages/auth/debug.html","/config":"pages/config.html","/auth/error":"pages/auth/error.html","/auth/microsoft-callback":"pages/auth/microsoft-callback.html","/o3-discussions":"pages/o3-discussions.html","/tasks":"pages/tasks.html","/":"pages/index.html","/test-auth":"pages/test-auth.html","/team-discussions":"pages/team-discussions.html","/team-discussions/review/[id]":"pages/team-discussions/review/[id].html","/weekly-discussions/[id]":"pages/weekly-discussions/[id].html","/weekly-discussions":"pages/weekly-discussions.html","/_document":"pages/_document.js","/404":"pages/404.html"}
