@@ -24,6 +24,11 @@ self.__BUILD_MANIFEST = {
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
+    "/auth/microsoft-callback": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/auth/microsoft-callback.js"
+    ],
     "/test-auth": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",

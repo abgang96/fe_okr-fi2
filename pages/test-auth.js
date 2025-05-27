@@ -16,7 +16,7 @@ const LoginPage = () => {
 
   useEffect(() => {
   const runTeamsAuth = async () => {
-    console.log("Updated Frontend");
+    console.log("Updated Frontend once again");
     const isInTeamsPopup = window.location !== window.parent.location;
 
     if (isInTeamsPopup) {
