@@ -4,6 +4,9 @@ import Head from 'next/head';
 import MicrosoftAuthButton from '../components/auth/MicrosoftAuthButton';
 import { api } from '../lib/api';
 
+import { app, authentication } from '@microsoft/teams-js';
+import { useTeamsAuth } from '../lib/teamsAuth';
+
 const LoginPage = () => {
   const [authError, setAuthError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -11,50 +14,84 @@ const LoginPage = () => {
   const [userInfo, setUserInfo] = useState(null);
   const router = useRouter();
 
-  // Check if user is already authenticated
   useEffect(() => {
-    const checkAuth = async () => {
+    const runTeamsAuth = async () => {
+    console.log("Updated Frontend")
+    const isInTeamsPopup = window.location !== window.parent.location;
+
+    if (isInTeamsPopup) {
       try {
-        if (typeof window === 'undefined') {
-          return;
-        }
-
-        const token = localStorage.getItem('accessToken');
-        const userStr = localStorage.getItem('user');
-        const isAuth = localStorage.getItem('isAuthenticated');
-
-        if (!token || !userStr || isAuth !== 'true') {
-          setIsLoading(false);
-          return;
-        }
-
-        try {
-          // Verify the token is still valid
-          const authCheck = await api.get('/api/auth/me/');
-
-          if (authCheck.data) {
-            const userData = JSON.parse(userStr);
-            setIsAuthenticated(true);
-            setUserInfo(userData);
-
-            // Use replace to prevent back button from coming back to login
-            window.location.replace('/');
-            return;
-          }
-        } catch (error) {
-          console.error('Auth verification failed:', error);
-          localStorage.clear();
-        }
+        await app.initialize();
+        const token = await authentication.getAuthToken();
+        authentication.notifySuccess(token);
       } catch (error) {
-        console.error('Auth check error:', error);
-        localStorage.clear();
-      } finally {
-        setIsLoading(false);
+        console.error('Popup auth failed:', error);
+        authentication.notifyFailure(error.message || 'Popup authentication failed');
       }
-    };
+      return;
+    }
 
-    checkAuth();
+    // Normal login flow (full screen)
+    const user = await useTeamsAuth();
+    if (user) {
+      setIsAuthenticated(true);
+      setUserInfo(user);
+      window.location.replace('/');
+    } else {
+      setIsAuthenticated(false);
+    }
+
+    setIsLoading(false);
+  };
+
+    runTeamsAuth();
   }, []);
+
+
+  // // Check if user is already authenticated
+  // useEffect(() => {
+  //   const checkAuth = async () => {
+  //     try {
+  //       if (typeof window === 'undefined') {
+  //         return;
+  //       }
+
+  //       const token = localStorage.getItem('accessToken');
+  //       const userStr = localStorage.getItem('user');
+  //       const isAuth = localStorage.getItem('isAuthenticated');
+
+  //       if (!token || !userStr || isAuth !== 'true') {
+  //         setIsLoading(false);
+  //         return;
+  //       }
+
+  //       try {
+  //         // Verify the token is still valid
+  //         const authCheck = await api.get('/api/auth/me/');
+
+  //         if (authCheck.data) {
+  //           const userData = JSON.parse(userStr);
+  //           setIsAuthenticated(true);
+  //           setUserInfo(userData);
+
+  //           // Use replace to prevent back button from coming back to login
+  //           window.location.replace('/');
+  //           return;
+  //         }
+  //       } catch (error) {
+  //         console.error('Auth verification failed:', error);
+  //         localStorage.clear();
+  //       }
+  //     } catch (error) {
+  //       console.error('Auth check error:', error);
+  //       localStorage.clear();
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   };
+
+  //   checkAuth();
+  // }, []);
 
   // Handle successful login
   const handleLoginComplete = async (userData) => {
