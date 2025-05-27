@@ -24,9 +24,11 @@ const LoginPage = () => {
         await app.initialize();
         const token = await authentication.getAuthToken();
         authentication.notifySuccess(token);
+        setIsLoading(false)
       } catch (error) {
         console.error('Popup auth failed:', error);
         authentication.notifyFailure(error.message || 'Popup authentication failed');
+        setIsLoading(false)
       }
       return; // Don't run anything else in popup
     }
@@ -39,13 +41,16 @@ const LoginPage = () => {
         console.log("User authenticated:", user);
         setIsAuthenticated(true);
         setUserInfo(user);
+        setIsLoading(false)
         window.location.replace('/');
       } else {
         setIsAuthenticated(false);
+        setIsLoading(false)
       }
     } catch (error) {
       console.error('Auth error:', error);
       setIsAuthenticated(false);
+      setIsLoading(false)
     } finally {
       setIsLoading(false); // Ensure we always clear loading state
     }
