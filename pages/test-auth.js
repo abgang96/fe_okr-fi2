@@ -15,8 +15,8 @@ const LoginPage = () => {
   const router = useRouter();
 
   useEffect(() => {
-    const runTeamsAuth = async () => {
-    console.log("Updated Frontend")
+  const runTeamsAuth = async () => {
+    console.log("Updated Frontend");
     const isInTeamsPopup = window.location !== window.parent.location;
 
     if (isInTeamsPopup) {
@@ -28,24 +28,32 @@ const LoginPage = () => {
         console.error('Popup auth failed:', error);
         authentication.notifyFailure(error.message || 'Popup authentication failed');
       }
-      return;
+      return; // Don't run anything else in popup
     }
 
-    // Normal login flow (full screen)
-    const user = await useTeamsAuth();
-    if (user) {
-      setIsAuthenticated(true);
-      setUserInfo(user);
-      window.location.replace('/');
-    } else {
+    try {
+      await app.initialize(); // Ensure Teams SDK is initialized
+
+      const user = await useTeamsAuth(); // Custom function you’re using for normal login flow
+      if (user) {
+        console.log("User authenticated:", user);
+        setIsAuthenticated(true);
+        setUserInfo(user);
+        window.location.replace('/');
+      } else {
+        setIsAuthenticated(false);
+      }
+    } catch (error) {
+      console.error('Auth error:', error);
       setIsAuthenticated(false);
+    } finally {
+      setIsLoading(false); // Ensure we always clear loading state
     }
-
-    setIsLoading(false);
   };
 
-    runTeamsAuth();
+  runTeamsAuth();
   }, []);
+
 
 
   // // Check if user is already authenticated
