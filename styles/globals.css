@@ -149,3 +149,27 @@ a {
 .task-item {
   @apply border rounded-md p-3 mb-2 transition-all hover:shadow-md;
 }
+
+/* Responsive utilities */
+@media screen and (max-width: 640px) {
+  .okr-tree-container {
+    height: calc(100vh - 64px);
+    overflow: hidden;
+  }
+  
+  /* Make controls in ReactFlow more touch-friendly */
+  .react-flow__controls {
+    @apply bottom-4 right-4 !important;
+    transform: scale(1.2);
+  }
+  
+  /* Ensure modal forms are easy to interact with on mobile */
+  input, select, textarea {
+    @apply text-base py-2 px-3;
+  }
+  
+  /* Create more spacing for touch targets */
+  button, a {
+    @apply py-2 px-3;
+  }
+}

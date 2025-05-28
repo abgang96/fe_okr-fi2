@@ -61,18 +61,42 @@ export default function WeeklyDiscussions() {
         return 'bg-gray-100 text-gray-800';
     }
   };
-  
-  const getButtonText = (form) => {
+    const getButtonText = (form) => {
     // If form is submitted but can be edited
-    if (form.status === 2 && form.can_edit) return 'View/Edit Submission';
+    if (form.status === 2 && form.can_edit) return (
+      <>
+        <span className="hidden sm:inline">View/Edit Submission</span>
+        <span className="sm:hidden">View/Edit</span>
+      </>
+    );
     // If form is submitted and cannot be edited
-    if (form.status === 2) return 'View Submission';
+    if (form.status === 2) return (
+      <>
+        <span className="hidden sm:inline">View Submission</span>
+        <span className="sm:hidden">View</span>
+      </>
+    );
     // If form is for a future week
-    if (form.is_future) return 'Week Not Started Yet';
+    if (form.is_future) return (
+      <>
+        <span className="hidden sm:inline">Week Not Started Yet</span>
+        <span className="sm:hidden">Not Started</span>
+      </>
+    );
     // If form is for past week
-    if (isPastWeek(form.entry_date)) return 'Complete Form';
+    if (isPastWeek(form.entry_date)) return (
+      <>
+        <span className="hidden sm:inline">Complete Form</span>
+        <span className="sm:hidden">Complete</span>
+      </>
+    );
     // Current week, not submitted
-    return 'Start Form';
+    return (
+      <>
+        <span className="hidden sm:inline">Start Form</span>
+        <span className="sm:hidden">Start</span>
+      </>
+    );
   };
   
   const isCurrentWeek = (dateStr) => {
@@ -107,51 +131,47 @@ export default function WeeklyDiscussions() {
         isAuthenticated={isAuthenticated}
         user={JSON.parse(localStorage.getItem('user') || '{}')}
         hideTeamDiscussions={true}
-      />
-      <div className="container mx-auto px-4 py-8">
+      />      <div className="container mx-auto px-4 py-4 sm:py-8">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">WEEKLY DISCUSSION</h1>
+          <h1 className="text-xl sm:text-3xl font-bold">WEEKLY DISCUSSION</h1>
           
-
-        </div>
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-          </div>
-        ) : error ? (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">  
-            {error}
+        </div>        {loading ? (
+          <div className="flex justify-center items-center h-40 sm:h-64">
+            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-t-2 border-b-2 border-blue-500"></div>
+          </div>        ) : error ? (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-3 sm:px-4 py-3 rounded mb-4">  
+            <p className="text-sm sm:text-base">{error}</p>
             {!isAuthenticated && (
               <div className="mt-4">
                 <Link href="/test-auth">
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
+                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm sm:text-base">
                     Login
                   </button>
                 </Link>
               </div>
             )}
-          </div>
-        ) : (
+          </div>        ) : (
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="p-6">
-              
-              <ul className="divide-y divide-gray-200">
+            <div className="p-3 sm:p-6">
+                <ul className="divide-y divide-gray-200">
                 {forms.map((form) => (
-                  <li key={form.form_id} className="py-4">                    <div className="flex items-center justify-between">
+                  <li key={form.form_id} className="py-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                       <div className="flex flex-col">
                         <div className="py-1">
                           <span className={`inline-flex items-center px-3 py-1 rounded-md text-sm font-medium ${isCurrentWeek(form.entry_date) ? 'bg-blue-100 text-blue-800' : ''}`}>
                             <span className="text-base">{form.week}</span>
-                            {isCurrentWeek(form.entry_date) && <span className="ml-2 font-bold">(Current Week)</span>}
+                            {isCurrentWeek(form.entry_date) }
+                            {/* {isCurrentWeek(form.entry_date) && <span className="ml-2 font-bold">(Current Week)</span>} */}
                           </span>
                         </div>
                         {/* <span className={`mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(form.status)}`}>
                           {form.status_display}
                         </span> */}
                       </div>
-                      <Link href={`/weekly-discussions/${form.form_id}`}>
+                      <Link href={`/weekly-discussions/${form.form_id}`} className="w-full sm:w-auto">
                         <button
-                          className={`px-4 py-2 rounded-md ${
+                          className={`w-full sm:w-auto min-w-[140px] text-center px-4 py-2 rounded-md ${
                             form.is_future 
                               ? 'bg-gray-400 text-white cursor-not-allowed'
                               : form.status === 2 && form.can_edit

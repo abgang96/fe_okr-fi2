@@ -408,13 +408,12 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
       alert('Failed to create task. Please try again.');
     }
   };
-
   return (
     <div className="okr-tree-container h-screen">
-      <div className="flex justify-between mb-4 p-2 bg-gray-100 rounded">
-        <div className="flex items-center space-x-4">
-          <h2 className="text-lg font-semibold">OKR Alignment</h2>
-          <div className="relative">
+      <div className="flex flex-col sm:flex-row justify-between mb-4 p-2 bg-gray-100 rounded">
+        <div className="flex items-center space-x-4 mb-2 sm:mb-0">
+          {/* <h2 className="text-lg font-semibold">OKR Alignment</h2> */}
+          <div className="relative w-full sm:w-auto">
             <select
               className="block appearance-none w-full bg-white border border-gray-300 hover:border-gray-400 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline"
               value={selectedRootOkr}
@@ -434,27 +433,27 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
             </div>
           </div>
         </div>
-        <div>
-          <button
-            className="px-3 py-1 bg-[#F6490D] text-white rounded hover:bg-[#E03D00] mr-2"
+        <div className="flex flex-wrap gap-2">          <button
+            className="flex-grow sm:flex-grow-0 px-3 py-1 bg-[#F6490D] text-white rounded hover:bg-[#E03D00]"
             onClick={() => {
               setFormType('root');
               setShowAddOKRForm(true);
             }}
           >
-            Add Root Objective
+            <span className="hidden sm:inline">Add Root Objective</span>
+            <span className="sm:hidden">Add Root</span>
           </button>
           
           {selectedOKR && (
-            <>
-              <button
-                className="px-3 py-1 bg-[#F6490D] text-white rounded hover:bg-[#E03D00] mr-2"
+            <>          <button
+                className="flex-grow sm:flex-grow-0 px-3 py-1 bg-[#F6490D] text-white rounded hover:bg-[#E03D00]"
                 onClick={() => {
                   setFormType('sub');
                   setShowAddOKRForm(true);
                 }}
               >
-                Add Sub Objective
+                <span className="hidden sm:inline">Add Sub Objective</span>
+                <span className="sm:hidden">Add Sub</span>
               </button>
               {/* <button
                 className="px-3 py-1 bg-[#F6490D] text-white rounded hover:bg-[#E03D00]"
@@ -466,13 +465,12 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
           )}
         </div>
       </div>
-      
-      {isLoading ? (
+        {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <p className="text-lg text-gray-500">Loading OKRs...</p>
         </div>
       ) : (
-        <div style={{ height: '80vh', border: '1px solid #ddd', borderRadius: '5px' }}>
+        <div className="h-[80vh] border border-solid border-gray-300 rounded">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -483,23 +481,36 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
             fitView
             attributionPosition="bottom-right"
             defaultViewport={{ x: 0, y: 0, zoom: 0.65 }}
+            zoomOnScroll={true}
+            panOnDrag={true}
+            zoomOnDoubleClick={true}
           >
             <Background />
             <Controls />
           </ReactFlow>
         </div>
       )}
-      
-      {/* Add OKR Form Modal */}
+        {/* Add OKR Form Modal */}
       {showAddOKRForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-semibold mb-4">
-              {formType === 'root' 
-                ? 'Add Root Objective' 
-                : `Add Sub-Objective for: ${selectedOKR?.name || 'Selected OKR'}`
-              }
-            </h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-4 sm:p-6 rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg sm:text-xl font-semibold">
+                {formType === 'root' 
+                  ? 'Add Root Objective' 
+                  : `Add Sub-Objective for: ${selectedOKR?.name || 'Selected OKR'}`
+                }
+              </h3>
+              <button 
+                onClick={() => setShowAddOKRForm(false)} 
+                className="text-gray-500 hover:text-gray-700"
+                aria-label="Close"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
             <AddOKRForm 
               onSubmit={handleAddOKR}
               onCancel={() => setShowAddOKRForm(false)}
@@ -514,14 +525,25 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
       
       {/* Add Task Form Modal */}
       {showAddTaskForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-semibold mb-4">
-              {selectedOKR 
-                ? `Add Task for: ${selectedOKR.name}`
-                : 'Add Task'
-              }
-            </h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-4 sm:p-6 rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg sm:text-xl font-semibold">
+                {selectedOKR 
+                  ? `Add Task for: ${selectedOKR.name}`
+                  : 'Add Task'
+                }
+              </h3>
+              <button 
+                onClick={() => setShowAddTaskForm(false)} 
+                className="text-gray-500 hover:text-gray-700"
+                aria-label="Close"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
             <AddTaskForm 
               okrId={selectedOKR?.okr_id}
               users={users}

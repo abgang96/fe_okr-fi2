@@ -43,11 +43,6 @@ self.__BUILD_MANIFEST = {
       "static/chunks/webpack.js",
       "static/chunks/main.js",
       "static/chunks/pages/weekly-discussions.js"
-    ],
-    "/weekly-discussions/[id]": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/weekly-discussions/[id].js"
     ]
   },
   "ampFirstPages": []
