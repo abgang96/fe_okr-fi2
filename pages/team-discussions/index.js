@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { getTeamMemberForms, getTeamMetrics } from '../../lib/weeklyDiscussions';
+import { getTeamMemberForms, getTeamMetrics, getMyTeamMembers } from '../../lib/weeklyDiscussions';
 import Header from '../../components/Header';
 
 export default function TeamDiscussions() {
@@ -28,7 +28,6 @@ export default function TeamDiscussions() {
       setLoading(false);
     }
   }, []);
-
   useEffect(() => {
     const fetchTeamData = async () => {
       if (!isAuthenticated) return;
@@ -42,31 +41,61 @@ export default function TeamDiscussions() {
         console.log('Fetching team metrics...');
         const metricsData = await getTeamMetrics();
         console.log('Team metrics received:', metricsData);
-        setMetrics(metricsData);
-
+        setMetrics(metricsData);        // Fetch all team members
+        console.log('Fetching all team members...');
+        let allTeamMembers = [];
+        try {
+          // Try to get team members from the weekly forms API
+          const teamMembersResponse = await getMyTeamMembers();
+          allTeamMembers = teamMembersResponse?.team_members || [];
+          console.log('All team members received:', allTeamMembers);
+        } catch (teamErr) {
+          console.warn('Could not fetch team members, will continue with only forms data:', teamErr);
+          // We'll continue without team members data and just show the forms
+        }
+        
         // Then fetch forms
         console.log('Fetching team member forms...');
         const formsData = await getTeamMemberForms();
         console.log('Team forms received:', formsData);
-        
-        // Group forms by team member
+          // Create a map to group forms by user
         const groupedForms = {};
-        formsData.forEach(form => {
-          const userId = form.user;
-          if (!groupedForms[userId]) {
-            groupedForms[userId] = {
-              user_name: form.user_name,
+          // If we have team members data, initialize the map with all team members
+        if (allTeamMembers.length > 0) {
+          allTeamMembers.forEach(member => {
+            groupedForms[member.id] = {
+              user_id: member.id,
+              user_name: member.user_name || member.teams_user_principal_name,
+              email: member.teams_user_principal_name,
               forms: []
             };
+          });
+        }
+        
+        // Add forms to the respective members
+        formsData.forEach(form => {
+          const userId = form.user;
+          if (groupedForms[userId]) {
+            groupedForms[userId].forms.push(form);
+          } else {
+            // This handles forms from users who might not be in the team members list
+            // or the case where we couldn't fetch team members
+            groupedForms[userId] = {
+              user_id: userId,
+              user_name: form.user_name,
+              email: form.teams_user_principal_name || '',
+              forms: [form]
+            };
           }
-          groupedForms[userId].forms.push(form);
         });
         
         // Sort forms for each user by date (newest first)
         Object.values(groupedForms).forEach(user => {
-          user.forms.sort((a, b) => {
-            return new Date(b.entry_date) - new Date(a.entry_date);
-          });
+          if (user.forms.length > 0) {
+            user.forms.sort((a, b) => {
+              return new Date(b.entry_date) - new Date(a.entry_date);
+            });
+          }
         });
         
         setForms(Object.values(groupedForms));
@@ -253,22 +282,26 @@ export default function TeamDiscussions() {
                   </svg>
                 </button>
               </div>
-              
-              {expandedMembers[index] && (
+                {expandedMembers[index] && (
                 <div className="p-4">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Week</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Form Status</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Review Status</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                      </thead>
-                      
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {teamMember.forms.map((form) => (
+                  {teamMember.forms.length === 0 ? (
+                    <div className="text-center py-8 bg-gray-50 rounded-md">
+                      <p className="text-gray-500">No forms submitted yet</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Week</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Form Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Review Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                          </tr>
+                        </thead>
+                        
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {teamMember.forms.map((form) => (
                           <tr key={form.form_id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap">
                               {form.week}
@@ -305,8 +338,8 @@ export default function TeamDiscussions() {
                           </tr>
                         ))}
                       </tbody>
-                    </table>
-                  </div>
+                    </table>                  </div>
+                  )}
                 </div>
               )}
             </div>

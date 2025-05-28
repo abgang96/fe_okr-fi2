@@ -68,7 +68,7 @@ export default function WeeklyDiscussions() {
     // If form is submitted and cannot be edited
     if (form.status === 2) return 'View Submission';
     // If form is for a future week
-    if (form.is_future) return 'Not Available Yet';
+    if (form.is_future) return 'Week Not Started Yet';
     // If form is for past week
     if (isPastWeek(form.entry_date)) return 'Complete Form';
     // Current week, not submitted
@@ -137,16 +137,17 @@ export default function WeeklyDiscussions() {
               
               <ul className="divide-y divide-gray-200">
                 {forms.map((form) => (
-                  <li key={form.form_id} className="py-4">
-                    <div className="flex items-center justify-between">
+                  <li key={form.form_id} className="py-4">                    <div className="flex items-center justify-between">
                       <div className="flex flex-col">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isCurrentWeek(form.entry_date) ? 'bg-blue-100 text-blue-800' : ''}`}>
-                          {form.week}
-                          {isCurrentWeek(form.entry_date) && <span className="ml-2 font-bold">(Current Week)</span>}
-                        </span>
-                        <span className={`mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(form.status)}`}>
+                        <div className="py-1">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-md text-sm font-medium ${isCurrentWeek(form.entry_date) ? 'bg-blue-100 text-blue-800' : ''}`}>
+                            <span className="text-base">{form.week}</span>
+                            {isCurrentWeek(form.entry_date) && <span className="ml-2 font-bold">(Current Week)</span>}
+                          </span>
+                        </div>
+                        {/* <span className={`mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(form.status)}`}>
                           {form.status_display}
-                        </span>
+                        </span> */}
                       </div>
                       <Link href={`/weekly-discussions/${form.form_id}`}>
                         <button

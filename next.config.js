@@ -10,10 +10,9 @@ const nextConfig = {
       {
         // Allow Microsoft Teams to iframe the app
         source: '/(.*)',
-        headers: [
-          {
+        headers: [          {
             key: 'Content-Security-Policy',
-            value: "frame-ancestors teams.microsoft.com *.teams.microsoft.com *.skype.com;",
+            value: "frame-ancestors 'self' https://teams.microsoft.com teams.microsoft.com *.teams.microsoft.com *.skype.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://statics.teams.cdn.office.net https://*.microsoft.com;",
           }
         ],
       },

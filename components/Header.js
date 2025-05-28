@@ -84,21 +84,27 @@ const Header = () => {
                 >
                   OKR Tree
                 </Link>
-                <Link 
+                {/* <Link 
                   href="/o3-discussions" 
                   className={`${router.pathname.startsWith('/o3-discussions') ? 'border-[#F6490D] text-white' : 'border-transparent text-gray-300 hover:text-white'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
                 >
                   O3 Discussions
-                </Link>
+                </Link>                 */}
                 <Link 
                   href="/weekly-discussions" 
                   className={`${router.pathname.startsWith('/weekly-discussions') ? 'border-[#F6490D] text-white' : 'border-transparent text-gray-300 hover:text-white'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
                 >
                   Weekly Discussions
+                </Link>
+                <Link 
+                  href="/team-discussions" 
+                  className={`${router.pathname.startsWith('/team-discussions') ? 'border-[#F6490D] text-white' : 'border-transparent text-gray-300 hover:text-white'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
+                >
+                  Team Discussions
                 </Link>              
                 {isTeamMember && (
                   <Link 
-                    href="/configuration-master" 
+                    href="/configuration-master"
                     className={`${router.pathname === '/configuration-master' ? 'border-[#F6490D] text-white' : 'border-transparent text-gray-300 hover:text-white'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
                   >
                     Configuration

@@ -9,10 +9,74 @@ const OKRNode = ({ data, isConnectable }) => {
   const [showEditOKRForm, setShowEditOKRForm] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [businessUnits, setBusinessUnits] = useState([]);
-  const [assignedUsers, setAssignedUsers] = useState([]);  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [assignedUsers, setAssignedUsers] = useState([]);  
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [users, setUsers] = useState([]);
-  
-  // Fetch assigned users for this OKR
+  // Check if current user has edit permission for this OKR
+  const hasEditPermission = () => {
+    // If there's no current user data, deny permission
+    if (!data.currentUser) {
+      console.log('No current user data available');
+      return false;
+    }
+    
+    // Get current user's Teams ID
+    const currentUserTeamsId = data.currentUser.teams_id;
+    console.log('Current user teams_id:', currentUserTeamsId);
+    
+    // First check if current user is directly assigned to this OKR
+    const isDirectlyAssigned = assignedUsers.some(user => 
+      user.user_id === currentUserTeamsId
+    );
+    
+    if (isDirectlyAssigned) {
+      console.log('User is directly assigned to this OKR');
+      return true;
+    }
+    
+    // If not directly assigned, check if any team member is assigned to this OKR
+    if (data.teamMembers && data.teamMembers.length > 0) {
+      const teamMemberIds = data.teamMembers.map(member => member.teams_id);
+      console.log('Team member IDs:', teamMemberIds);
+      console.log('Assigned user IDs:', assignedUsers.map(user => user.user_id));
+      
+      // Check if any team member is assigned to this OKR
+      const isTeamMemberAssigned = assignedUsers.some(user => 
+        teamMemberIds.includes(user.user_id)
+      );
+      
+      if (isTeamMemberAssigned) {
+        console.log('Team member is assigned to this OKR');
+        return true;
+      }
+    }
+      // Check if user is a manager of any assigned user (check manager relationship)
+    if (users.length > 0 && assignedUsers.length > 0) {
+      const assignedUserIds = assignedUsers.map(user => user.user_id);
+      console.log('Assigned user IDs:', assignedUserIds);
+      
+      // Log all users with their teams_id and manager_id for debugging
+      console.log('Users data:', users.map(user => ({
+        teams_id: user.teams_id,
+        manager_id: user.manager_id,
+        name: user.user_name
+      })));
+      
+      // Find if any user with manager_id matching current user's teams_id is assigned to this OKR
+      const isManagerOfAssignedUser = users.some(user => 
+        assignedUserIds.includes(user.teams_id) && user.manager_id === currentUserTeamsId
+      );
+      
+      if (isManagerOfAssignedUser) {
+        console.log('User is a manager of an assigned user');
+        return true;
+      }
+    }
+    
+    console.log('User does not have edit permission for this OKR');
+    return false;
+  };
+    // Fetch assigned users for this OKR
   useEffect(() => {
     const fetchAssignedUsers = async () => {
       if (!data?.okr_id || !isExpanded) return;
@@ -22,6 +86,10 @@ const OKRNode = ({ data, isConnectable }) => {
         // Use the new endpoint we added for getting assigned users
         const usersData = await api.getOKRAssignedUsers(data.okr_id);
         setAssignedUsers(usersData);
+        
+        // Also fetch all users for manager relationship check
+        const allUsersData = await api.getUsers();
+        setUsers(allUsersData);
       } catch (error) {
         console.error('Error fetching assigned users:', error);
         // Fallback to just showing assigned_users_details if already in the data
@@ -170,6 +238,29 @@ const OKRNode = ({ data, isConnectable }) => {
     }
   };
 
+  useEffect(() => {
+    // Check manager relationship when assigned users change and there's a current user
+    const checkManagerRelationship = async () => {
+      if (!data?.currentUser || !assignedUsers.length) return;
+      
+      try {
+        // For each assigned user, get their full details and check if current user is their manager
+        for (const assignedUser of assignedUsers) {
+          const userDetails = await api.getUserByTeamsId(assignedUser.user_id);
+          if (userDetails && userDetails.manager_id === data.currentUser.teams_id) {
+            console.log(`User ${data.currentUser.teams_id} is a manager of assigned user ${assignedUser.user_id}`);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking manager relationship:', error);
+      }
+    };
+
+    if (isExpanded) {
+      checkManagerRelationship();
+    }
+  }, [assignedUsers, data.currentUser, isExpanded]);
+  
   return (
     <>
       <Handle
@@ -256,35 +347,39 @@ const OKRNode = ({ data, isConnectable }) => {
             </div>
             
             <div className="flex space-x-2 mt-3">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowEditOKRForm(true);
-                }}
-                className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded"
-              >
-                Edit
-              </button>
-              
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  if (confirm('Are you sure you want to delete this objective?')) {
-                    try {
-                      await api.deleteOKR(data.okr_id);
-                      alert('OKR deleted successfully');
-                      // Refresh the page to update the tree
-                      window.location.reload();
-                    } catch (error) {
-                      console.error('Error deleting OKR:', error);
-                      alert('Failed to delete OKR. Please try again.');
-                    }
-                  }
-                }}
-                className="text-xs px-2 py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded"
-              >
-                Delete
-              </button>
+              {hasEditPermission() && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowEditOKRForm(true);
+                    }}
+                    className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded"
+                  >
+                    Edit
+                  </button>
+                  
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (confirm('Are you sure you want to delete this objective?')) {
+                        try {
+                          await api.deleteOKR(data.okr_id);
+                          alert('OKR deleted successfully');
+                          // Refresh the page to update the tree
+                          window.location.reload();
+                        } catch (error) {
+                          console.error('Error deleting OKR:', error);
+                          alert('Failed to delete OKR. Please try again.');
+                        }
+                      }
+                    }}
+                    className="text-xs px-2 py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded"
+                  >
+                    Delete
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}

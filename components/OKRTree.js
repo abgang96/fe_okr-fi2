@@ -12,7 +12,7 @@ const nodeTypes = {
 };
 
 // Enhanced tree layout algorithm that prevents node collisions
-const buildTreeStructure = (okrsList, users = []) => {
+const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMembers = []) => {
   if (!okrsList || okrsList.length === 0) {
     return { nodes: [], edges: [] };
   }
@@ -84,16 +84,16 @@ const buildTreeStructure = (okrsList, users = []) => {
     
     // Create node
     const currentNodeId = `${nodeId}`;
-    const okr = okrMap[okrId];
-      nodes.push({
-      id: currentNodeId,
+    const okr = okrMap[okrId];      nodes.push({      id: currentNodeId,
       type: 'okrNode',
       position: { x: nodeX, y: nodeY },
       data: {
         ...okr,
         level,
         isLeafNode: children.length === 0,
-        users // Pass users to each node
+        users, // Pass users to each node
+        currentUser, // Pass current user to each node
+        teamMembers, // Pass team members to each node
       }
     });
     
@@ -168,16 +168,33 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
     users: true,
     departments: true,
     businessUnits: true
-  });
-  const [filter, setFilter] = useState({
+  });  const [filter, setFilter] = useState({
     team: teamId,
     department: departmentId,
     status: statusFilter
   });
+  const [currentUser, setCurrentUser] = useState(null);
+  const [teamMembers, setTeamMembers] = useState([]);
+  
   // Fetch users, departments, and business units once when component mounts
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
+        // Get current user from localStorage
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const userData = JSON.parse(userStr);
+          setCurrentUser(userData);
+          
+          // Fetch team members
+          try {
+            const teamMembersData = await api.getTeamMembers();
+            setTeamMembers(teamMembersData.teams || []);
+          } catch (teamErr) {
+            console.error('Error fetching team members:', teamErr);
+          }
+        }
+      
         console.log('Fetching users data...');
         const usersData = await api.getUsers();
         console.log('Users data loaded successfully');
@@ -319,7 +336,7 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
 
   // Update nodes with the onContinueIteration callback
   useEffect(() => {    if (okrsList.length > 0) {
-      const { nodes: treeNodes, edges: treeEdges } = buildTreeStructure(okrsList, users);
+      const { nodes: treeNodes, edges: treeEdges } = buildTreeStructure(okrsList, users, currentUser, teamMembers);
       
       // Add the onContinueIteration callback to each node
       const nodesWithCallback = treeNodes.map(node => ({

@@ -40,16 +40,25 @@ function MyApp({ Component, pageProps }) {
         setUser(devUser);
         */
       }
-      
-      // Only try Teams authentication if we're in Teams context
+        // Only try Teams authentication if we're in Teams context
       if (isTeams && !teamsLoading && context) {
         try {
-          await teamsAuth.initialize();
+          const initialized = await teamsAuth.initialize();
+          if (!initialized) {
+            console.warn('Teams SDK initialization failed - continuing without Teams auth');
+            setAuthLoading(false);
+            return;
+          }
+          
+          console.log('Teams client type:', context.hostClientType || 'unknown');
           const authenticatedUser = await teamsAuth.login();
           
           if (authenticatedUser) {
+            console.log('Authentication successful');
             setUser(authenticatedUser);
             configureApiAuth();
+          } else {
+            console.error('Authentication failed - no user returned');
           }
         } catch (error) {
           console.error('Teams authentication failed:', error);
