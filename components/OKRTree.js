@@ -81,19 +81,29 @@ const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMember
     // Calculate node center X position
     const nodeX = startX + (subtreeWidth / 2) - (nodeWidth / 2);
     const nodeY = level * verticalSpacing;
-    
-    // Create node
+      // Create node
     const currentNodeId = `${nodeId}`;
-    const okr = okrMap[okrId];      nodes.push({      id: currentNodeId,
+    const okr = okrMap[okrId];
+      // Check if current user is assigned to this OKR
+    let isAssignedToCurrentUser = false;
+    if (currentUser && currentUser.teams_id && okr.assigned_users_details) {
+      isAssignedToCurrentUser = okr.assigned_users_details.some(
+        user => user.user_id === currentUser.teams_id
+      );
+      console.log(`OKR ${okr.okr_id} - ${okr.name} - Is assigned to current user: ${isAssignedToCurrentUser}`);
+    }
+      
+    nodes.push({
+      id: currentNodeId,
       type: 'okrNode',
-      position: { x: nodeX, y: nodeY },
-      data: {
+      position: { x: nodeX, y: nodeY },      data: {
         ...okr,
         level,
         isLeafNode: children.length === 0,
         users, // Pass users to each node
         currentUser, // Pass current user to each node
         teamMembers, // Pass team members to each node
+        isAssignedToCurrentUser, // Flag to indicate if current user is assigned
       }
     });
     

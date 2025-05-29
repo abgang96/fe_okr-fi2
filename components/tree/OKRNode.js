@@ -12,8 +12,12 @@ const OKRNode = ({ data, isConnectable }) => {
   const [assignedUsers, setAssignedUsers] = useState([]);  
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [users, setUsers] = useState([]);
-  // Check if current user has edit permission for this OKR
+  const [isUserAssigned, setIsUserAssigned] = useState(false);// Check if current user has edit permission for this OKR
   const hasEditPermission = () => {
+    // Give everyone access to edit/delete all OKRs
+    return true;
+    
+    /* Previous permission logic removed:
     // If there's no current user data, deny permission
     if (!data.currentUser) {
       console.log('No current user data available');
@@ -75,6 +79,7 @@ const OKRNode = ({ data, isConnectable }) => {
     
     console.log('User does not have edit permission for this OKR');
     return false;
+    */
   };
     // Fetch assigned users for this OKR
   useEffect(() => {
@@ -105,9 +110,29 @@ const OKRNode = ({ data, isConnectable }) => {
     
     if (isExpanded) {
       fetchAssignedUsers();
-    }
-  }, [data.okr_id, isExpanded, data.assigned_users_details]);
-    // Fetch users and departments for edit forms
+    }  }, [data.okr_id, isExpanded, data.assigned_users_details]);  // Check if current user is assigned to this OKR
+  useEffect(() => {
+    const checkIfUserIsAssigned = () => {
+      if (!data.currentUser || !data.currentUser.teams_id) return;
+      
+      // Check if the current user is assigned to this OKR
+      if (assignedUsers.length > 0) {
+        const isAssigned = assignedUsers.some(user => 
+          user.user_id === data.currentUser.teams_id
+        );
+        
+        // Update the data flag and state if needed
+        if (isAssigned) {
+          data.isAssignedToCurrentUser = true;
+          setIsUserAssigned(true);
+        }
+      }
+    };
+    
+    checkIfUserIsAssigned();
+  }, [assignedUsers, data.currentUser]);
+  
+  // Fetch users and departments for edit forms
   useEffect(() => {
     const fetchFormData = async () => {
       try {
@@ -185,12 +210,22 @@ const OKRNode = ({ data, isConnectable }) => {
       alert('Failed to update OKR. Please try again.');
     }
   };
-
   useEffect(() => {
     if (isExpanded && data?.okr_id) {
       // If assigned_users_details is available, use it directly
       if (data.assigned_users_details && data.assigned_users_details.length > 0) {
         setAssignedUsers(data.assigned_users_details);
+        
+        // Check if current user is in the assigned_users_details
+        if (data.currentUser && data.currentUser.teams_id) {
+          const isAssigned = data.assigned_users_details.some(
+            user => user.user_id === data.currentUser.teams_id
+          );
+          if (isAssigned) {
+            data.isAssignedToCurrentUser = true;
+            setIsUserAssigned(true);
+          }
+        }
       }
     }
   }, [isExpanded, data]);
@@ -260,6 +295,31 @@ const OKRNode = ({ data, isConnectable }) => {
       checkManagerRelationship();
     }
   }, [assignedUsers, data.currentUser, isExpanded]);
+    // We've already handled this check in the previous useEffect, so this one is redundant
+  /*
+  useEffect(() => {
+    const checkIfUserIsAssigned = () => {
+      if (!data.currentUser || !data.currentUser.teams_id) return;
+      
+      // Check if the current user is already assigned based on the data flag
+      if (data.isAssignedToCurrentUser) return;
+      
+      // Check in the local assignedUsers state
+      if (assignedUsers.length > 0) {
+        const isAssigned = assignedUsers.some(user => 
+          user.user_id === data.currentUser.teams_id
+        );
+        
+        // If found in assignedUsers but not in the data flag, update the data
+        if (isAssigned && !data.isAssignedToCurrentUser) {
+          data.isAssignedToCurrentUser = true;
+        }
+      }
+    };
+    
+    checkIfUserIsAssigned();
+  }, [assignedUsers, data]);
+  */
   
   return (
     <>
@@ -267,15 +327,19 @@ const OKRNode = ({ data, isConnectable }) => {
         type="target"
         position={Position.Top}
         isConnectable={isConnectable}
-      />
-      
-      <div className={`okr-node ${typeof data.status === 'boolean' ? (data.status ? 'active' : 'inactive') : data.status?.toLowerCase()?.replace(' ', '-')} 
+      />      <div className={`okr-node ${typeof data.status === 'boolean' ? (data.status ? 'active' : 'inactive') : data.status?.toLowerCase()?.replace(' ', '-')} 
           ${data.isSelected || data.isChildOfSelected ? 'border-2' : 'border'}
-          ${data.borderColor || 'border-gray-300'}`}
-        style={{
+          ${data.borderColor || 'border-gray-300'}`}        style={{
           borderColor: data.isSelected || data.isChildOfSelected ? 
             (data.borderColor ? data.borderColor.replace('border-', '').replace('-500', '') : 'blue') : 
-            'gray'
+            'gray',
+          backgroundColor: (data.isAssignedToCurrentUser || isUserAssigned) ? '#f2bb7c' : 'white' // Use both data flag and state to ensure it works
+        }}
+        onClick={() => {
+          // Add debugging to check if data.isAssignedToCurrentUser is set correctly
+          if (data.isAssignedToCurrentUser) {
+            console.log(`OKR node ${data.okr_id} is assigned to current user`);
+          }
         }}
       >
         <div 

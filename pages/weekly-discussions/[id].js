@@ -35,7 +35,6 @@ export default function WeeklyFormDetail() {
       fetchFormDetails();
     }
   }, [id, isAuthenticated]);
-
   const fetchFormDetails = async () => {
     try {
       setLoading(true);
@@ -54,6 +53,26 @@ export default function WeeklyFormDetail() {
           answer_description: answer.answer_description || ''
         };
       });
+      
+      // Find Question ID 5 (delayed/blocked tasks) and set default to "No" if not already answered
+      const question5 = data.questions.find(q => q.question_id === 5);
+      if (question5 && question5.type === 1) { // Verify it's a multiple-choice question
+        // Check if question 5 already has an answer
+        const hasQuestion5Answer = data.answers.some(answer => answer.question === 5);
+        
+        if (!hasQuestion5Answer) {
+          // Find the "No" option for Question 5
+          const noOption = question5.options.find(option => option.option_desc.toLowerCase() === "no");
+          if (noOption) {
+            initialAnswers[5] = {
+              question_id: 5,
+              option_id: noOption.option_id,
+              answer_description: ''
+            };
+            console.log("Setting default answer for question 5 to 'No'");
+          }
+        }
+      }
       
       setAnswers(initialAnswers);
       setLoading(false);
