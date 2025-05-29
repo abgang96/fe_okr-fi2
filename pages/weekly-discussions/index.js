@@ -10,6 +10,7 @@ export default function WeeklyDiscussions() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('All'); // Add filter state
   const router = useRouter();
   
   // Check authentication on load
@@ -48,6 +49,29 @@ export default function WeeklyDiscussions() {
     };
     fetchForms();
   }, [isAuthenticated]);
+  
+  // Filter forms based on active filter
+  const getFilteredForms = () => {
+    if (!forms || forms.length === 0) return [];
+    
+    switch (activeFilter) {
+      case 'Pending':
+        // Return forms that haven't been filled (status = 0 or 1) and are not future weeks
+        return forms.filter(form => 
+          (form.status === 0 || form.status === 1) && !form.is_future
+        );
+      case 'Yet to Start':
+        // Return forms for the next 3 upcoming weeks
+        return forms.filter(form => form.is_future).slice(0, 3);
+      case 'Completed':
+        // Return forms that have been submitted (status = 2)
+        return forms.filter(form => form.status === 2);
+      case 'All':
+      default:
+        // Return all forms
+        return forms;
+    }
+  };
   
   const getStatusClass = (status) => {
     switch (status) {
@@ -125,7 +149,7 @@ export default function WeeklyDiscussions() {
   return (
     <div>
       <Head>
-        <title>WEEKLY DISCUSSION | OKR Tracker</title>
+        <title>O3 WEEKLY DISCUSSION | OKR Tracker</title>
       </Head>
       <Header
         isAuthenticated={isAuthenticated}
@@ -133,9 +157,30 @@ export default function WeeklyDiscussions() {
         hideTeamDiscussions={true}
       />      <div className="container mx-auto px-4 py-4 sm:py-8">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-xl sm:text-3xl font-bold">WEEKLY DISCUSSION</h1>
+          <h1 className="text-xl sm:text-3xl font-bold">O3 WEEKLY DISCUSSION</h1>
           
-        </div>        {loading ? (
+        </div>
+
+        {/* Filter buttons */}
+        {!loading && !error && forms.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-6">
+            {['All', 'Pending', 'Yet to Start', 'Completed'].map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setActiveFilter(filter)}
+                className={`px-4 py-2 rounded-md text-sm sm:text-base ${
+                  activeFilter === filter
+                    ? 'bg-[#F6490D] text-white'
+                    : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                }`}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {loading ? (
           <div className="flex justify-center items-center h-40 sm:h-64">
             <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>        ) : error ? (
@@ -149,25 +194,28 @@ export default function WeeklyDiscussions() {
                   </button>
                 </Link>
               </div>
-            )}
-          </div>        ) : (
+            )}          </div>        ) : (
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="p-3 sm:p-6">
+              {getFilteredForms().length === 0 ? (
+                <div className="py-8 text-center text-gray-500">
+                  <p>No forms found for this filter.</p>
+                </div>
+              ) : (
                 <ul className="divide-y divide-gray-200">
-                {forms.map((form) => (
-                  <li key={form.form_id} className="py-4">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                      <div className="flex flex-col">
-                        <div className="py-1">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-md text-sm font-medium ${isCurrentWeek(form.entry_date) ? 'bg-blue-100 text-blue-800' : ''}`}>
-                            <span className="text-base">{form.week}</span>
-                            {isCurrentWeek(form.entry_date) }
-                            {/* {isCurrentWeek(form.entry_date) && <span className="ml-2 font-bold">(Current Week)</span>} */}
+                  {getFilteredForms().map((form) => (
+                    <li key={form.form_id} className="py-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div className="flex flex-col">
+                          <div className="py-1">
+                            <span className={`inline-flex items-center px-3 py-1 rounded-md text-sm font-medium ${isCurrentWeek(form.entry_date) ? 'bg-blue-100 text-blue-800' : ''}`}>
+                              <span className="text-base">{form.week}</span>
+                              {isCurrentWeek(form.entry_date) && <span className="ml-2 font-bold">(Current Week)</span>}
+                            </span>
+                          </div>
+                          <span className={`mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(form.status)}`}>
+                            {form.status_display}
                           </span>
-                        </div>
-                        {/* <span className={`mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(form.status)}`}>
-                          {form.status_display}
-                        </span> */}
                       </div>
                       <Link href={`/weekly-discussions/${form.form_id}`} className="w-full sm:w-auto">
                         <button
@@ -186,9 +234,9 @@ export default function WeeklyDiscussions() {
                         </button>
                       </Link>
                     </div>
-                  </li>
-                ))}
+                  </li>                ))}
               </ul>
+              )}
             </div>
           </div>
         )}

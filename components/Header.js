@@ -96,7 +96,7 @@ const Header = () => {
                   href="/weekly-discussions" 
                   className={`${router.pathname.startsWith('/weekly-discussions') ? 'border-[#F6490D] text-white' : 'border-transparent text-gray-300 hover:text-white'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
                 >
-                  Weekly Discussions
+                  O3 Weekly Discussions
                 </Link>
                 <Link 
                   href="/team-discussions" 
@@ -203,7 +203,7 @@ const Header = () => {
                   className={`${router.pathname.startsWith('/weekly-discussions') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'} block px-3 py-2 rounded-md text-base font-medium`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Weekly Discussions
+                  O3 Weekly Discussions
                 </Link>
                 <Link 
                   href="/team-discussions" 

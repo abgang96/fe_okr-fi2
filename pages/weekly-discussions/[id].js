@@ -185,7 +185,7 @@ export default function WeeklyFormDetail() {
         <div className="flex gap-4">
           <Link href="/weekly-discussions">
             <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
-              WEEKLY DISCUSSION
+              O3 WEEKLY DISCUSSION
             </button>
           </Link>
           
