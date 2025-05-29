@@ -12,99 +12,149 @@ const LoginPage = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userInfo, setUserInfo] = useState(null);
+  const [authStatus, setAuthStatus] = useState("Checking authentication...");
   const router = useRouter();
 
   useEffect(() => {
-  const runTeamsAuth = async () => {
-    console.log("Updated Frontend once again");
-    const isInTeamsPopup = window.location !== window.parent.location;
-
-    if (isInTeamsPopup) {
+    const runTeamsAuth = async () => {
+      console.log("Starting authentication process");
+      setAuthStatus("Initializing authentication...");
+      
+      // Check if we're in a Teams iframe
+      const isInTeams = window.parent !== window.self;
+      const isInTeamsPopup = window.opener && window.opener !== window;
+      
+      console.log("Environment check: In Teams?", isInTeams, "In popup?", isInTeamsPopup);
+      
+      // Special case for authentication popup window
+      if (isInTeamsPopup) {
+        try {
+          setAuthStatus("Processing authentication popup...");
+          await app.initialize();
+          const token = await authentication.getAuthToken();
+          console.log("Got auth token from popup");
+          authentication.notifySuccess(token);
+          setIsLoading(false);
+        } catch (error) {
+          console.error('Popup auth failed:', error);
+          setAuthStatus(`Authentication popup failed: ${error.message || 'Unknown error'}`);
+          authentication.notifyFailure(error.message || 'Popup authentication failed');
+          setIsLoading(false);
+        }
+        return; // Don't run anything else in popup
+      }
+      
+      // Main authentication flow
       try {
-        await app.initialize();
-        const token = await authentication.getAuthToken();
-        authentication.notifySuccess(token);
-        setIsLoading(false)
-      } catch (error) {
-        console.error('Popup auth failed:', error);
-        authentication.notifyFailure(error.message || 'Popup authentication failed');
-        setIsLoading(false)
-      }
-      return; // Don't run anything else in popup
-    }
-
-    try {
-      await app.initialize(); // Ensure Teams SDK is initialized
-
-      const user = await useTeamsAuth(); // Custom function you’re using for normal login flow
-      if (user) {
-        console.log("User authenticated:", user);
-        setIsAuthenticated(true);
-        setUserInfo(user);
-        setIsLoading(false)
-        window.location.replace('/');
-      } else {
+        setAuthStatus("Initializing Teams SDK...");
+        
+        // Try-catch for app.initialize() as it might fail in some environments
+        try {
+          await app.initialize();
+          console.log("Teams SDK initialized successfully");
+        } catch (initError) {
+          console.log("Teams SDK initialization failed, continuing with standard auth:", initError);
+        }
+        
+        // Check for existing authentication first
+        const existingToken = localStorage.getItem('accessToken');
+        const userStr = localStorage.getItem('user');
+        
+        if (existingToken && userStr) {
+          try {
+            setAuthStatus("Verifying existing authentication...");
+            // Verify the token is still valid
+            const authCheck = await api.get('/api/auth/me/');
+            if (authCheck.data) {
+              console.log("Existing authentication is valid");
+              const userData = JSON.parse(userStr);
+              setIsAuthenticated(true);
+              setUserInfo(userData);
+              setIsLoading(false);
+              window.location.replace('/');
+              return;
+            }
+          } catch (error) {
+            console.log("Existing token validation failed, continuing with new authentication");
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('user');
+          }
+        }
+        
+        // Proceed with Teams authentication if in Teams
+        if (isInTeams) {
+          setAuthStatus("Authenticating with Teams...");
+          let teamsAuthAttempted = false;
+          
+          try {
+            // Set timeout to prevent infinite hanging
+            const timeoutPromise = new Promise((_, reject) => {
+              setTimeout(() => reject(new Error("Teams authentication timed out")), 10000);
+            });
+            
+            // Race between the auth attempt and timeout
+            const user = await Promise.race([
+              useTeamsAuth(),
+              timeoutPromise
+            ]);
+            
+            teamsAuthAttempted = true;
+            
+            if (user) {
+              console.log("Teams authentication successful:", user);
+              setIsAuthenticated(true);
+              setUserInfo(user);
+              setIsLoading(false);
+              window.location.replace('/');
+              return;
+            }
+          } catch (error) {
+            console.error('Teams authentication error:', error);
+            setAuthStatus(`Teams auth failed: ${error.message}. Trying alternative method...`);
+            
+            // For specific error cases in desktop teams, try fallback authentication
+            if (teamsAuthAttempted) {
+              try {
+                setAuthStatus("Trying authentication with popup...");
+                await authentication.authenticate({
+                  url: window.location.origin + "/auth-start",
+                  width: 600,
+                  height: 535
+                });
+                // If successful, the page will be redirected by the returned token processing
+                return;
+              } catch (popupError) {
+                console.error('Popup authentication failed:', popupError);
+                setAuthStatus(`Popup authentication failed: ${popupError.message}`);
+              }
+            }
+          }
+        }
+        
+        // If we reach here, Teams auth failed or we're not in Teams
+        setAuthStatus("Ready for manual authentication");
         setIsAuthenticated(false);
-        setIsLoading(false)
+        setIsLoading(false);
+        
+      } catch (error) {
+        console.error('Authentication process error:', error);
+        setAuthStatus(`Authentication error: ${error.message}`);
+        setIsAuthenticated(false);
+        setIsLoading(false);
+      } finally {
+        // Ensure loading state is cleared after a maximum timeout
+        setTimeout(() => {
+          if (isLoading) {
+            console.log("Forcing end of loading state after timeout");
+            setIsLoading(false);
+            setAuthStatus("Authentication process timed out. Please try signing in manually.");
+          }
+        }, 15000);
       }
-    } catch (error) {
-      console.error('Auth error:', error);
-      setIsAuthenticated(false);
-      setIsLoading(false)
-    } finally {
-      setIsLoading(false); // Ensure we always clear loading state
-    }
-  };
+    };
 
-  runTeamsAuth();
-  }, []);
-
-
-
-  // // Check if user is already authenticated
-  // useEffect(() => {
-  //   const checkAuth = async () => {
-  //     try {
-  //       if (typeof window === 'undefined') {
-  //         return;
-  //       }
-
-  //       const token = localStorage.getItem('accessToken');
-  //       const userStr = localStorage.getItem('user');
-  //       const isAuth = localStorage.getItem('isAuthenticated');
-
-  //       if (!token || !userStr || isAuth !== 'true') {
-  //         setIsLoading(false);
-  //         return;
-  //       }
-
-  //       try {
-  //         // Verify the token is still valid
-  //         const authCheck = await api.get('/api/auth/me/');
-
-  //         if (authCheck.data) {
-  //           const userData = JSON.parse(userStr);
-  //           setIsAuthenticated(true);
-  //           setUserInfo(userData);
-
-  //           // Use replace to prevent back button from coming back to login
-  //           window.location.replace('/');
-  //           return;
-  //         }
-  //       } catch (error) {
-  //         console.error('Auth verification failed:', error);
-  //         localStorage.clear();
-  //       }
-  //     } catch (error) {
-  //       console.error('Auth check error:', error);
-  //       localStorage.clear();
-  //     } finally {
-  //       setIsLoading(false);
-  //     }
-  //   };
-
-  //   checkAuth();
-  // }, []);
+    runTeamsAuth();
+  }, [isLoading]);  // Adding isLoading as dependency to prevent re-runs during state updates
 
   // Handle successful login
   const handleLoginComplete = async (userData) => {
@@ -135,10 +185,29 @@ const LoginPage = () => {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4">Checking authentication...</p>
+          <p className="mt-4">{authStatus}</p>
+          
+          {/* Add a timeout message after 5 seconds */}
+          {authStatus.includes("Checking") && (
+            <div className="mt-4 text-sm text-gray-500 max-w-md">
+              <p>If this takes longer than expected, you might need to:</p>
+              <ul className="list-disc pl-5 mt-2 text-left">
+                <li>Refresh the page</li>
+                <li>Try opening the app in a browser tab</li>
+                <li>Check your network connection</li>
+              </ul>
+              
+              <button 
+                onClick={() => setIsLoading(false)}
+                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+              >
+                Continue to sign-in
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -168,6 +237,11 @@ const LoginPage = () => {
             <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
               Sign in to OKR Management
             </h2>
+            {authStatus && authStatus !== "Ready for manual authentication" && (
+              <p className="mt-2 text-center text-sm text-gray-600">
+                {authStatus}
+              </p>
+            )}
           </div>
 
           {authError && (
