@@ -1,0 +1,21 @@
+/* Additional OKR tree styles */
+
+/* Ensure Business Unit filtered nodes get proper highlighting */
+.okr-node.business-unit-filtered,
+.okr-node.business-unit-filtered > div,
+div.business-unit-filtered {
+  background-color: #8fadd9 !important;
+}
+
+/* Ensure Assigned To filtered nodes get proper highlighting */
+.okr-node.assigned-to-filtered,
+.okr-node.assigned-to-filtered > div,
+div.assigned-to-filtered {
+  background-color: #d179ba !important;
+}
+
+/* Ensure filter colors have proper z-index */
+.business-unit-filtered,
+.assigned-to-filtered {
+  z-index: 5 !important;
+}

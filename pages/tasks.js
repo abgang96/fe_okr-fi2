@@ -100,7 +100,7 @@ export default function TasksPage() {
   };
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-100">
       <Head>
         <title>Your Tasks | OKR Tree</title>
         <meta name="description" content="Manage your OKR tasks" />
@@ -113,7 +113,7 @@ export default function TasksPage() {
         isTeamsContext={isTeamsContext} 
       />
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 content-with-fixed-header">
         {!isAuthenticated ? (
           <LoginForm onLogin={handleLogin} />
         ) : loading ? (

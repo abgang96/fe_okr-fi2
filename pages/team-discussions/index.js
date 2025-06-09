@@ -213,7 +213,7 @@ export default function TeamDiscussions() {
   }
   
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div>
       <Head>
         <title>Team Discussions | OKR Tracker</title>
       </Head>
@@ -223,7 +223,7 @@ export default function TeamDiscussions() {
         user={JSON.parse(localStorage.getItem('user') || '{}')}
       />
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 content-with-fixed-header">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Team Discussions</h1>
         </div>

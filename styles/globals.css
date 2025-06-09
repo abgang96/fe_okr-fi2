@@ -84,6 +84,7 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
+  /* Padding is now managed in header.css for consistency */
 }
 
 a {
@@ -125,9 +126,21 @@ a {
 
 /* OKR Tree node styles */
 .okr-node {
-  @apply rounded-lg shadow-md px-4 py-3 bg-white border-2 border-[#111111] transition-all;
-  min-width: 220px;
-  max-width: 300px;
+  @apply rounded-lg shadow-md px-3 py-2 border-2 border-[#111111] transition-all;
+  min-width: 180px;
+  max-width: 230px; /* Reduced by ~23% from original 300px max-width */
+  width: 100%;
+  height: auto;
+}
+
+.okr-node.business-unit-filtered {
+  background-color: #8fadd9 !important; 
+  z-index: 5 !important;
+}
+
+.okr-node.assigned-to-filtered {
+  background-color: #d179ba !important;
+  z-index: 5 !important;
 }
 
 .okr-node:hover {
@@ -149,6 +162,8 @@ a {
 .task-item {
   @apply border rounded-md p-3 mb-2 transition-all hover:shadow-md;
 }
+
+/* Fixed header styles are now in header.css */
 
 /* Responsive utilities */
 @media screen and (max-width: 640px) {
@@ -172,4 +187,85 @@ a {
   button, a {
     @apply py-2 px-3;
   }
+  
+  /* Additional mobile styling */
+  .okr-node {
+    min-width: 160px;
+    max-width: 200px;
+    padding: 0.5rem;
+  }
+  
+  .filter-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  
+  .filter-row > div {
+    margin: 0.25rem 0;
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* Tablet view */
+@media screen and (min-width: 641px) and (max-width: 1024px) {
+  .okr-node {
+    min-width: 170px;
+    max-width: 210px;
+  }
+  
+  .okr-tree-container {
+    width: 100%;
+    overflow-x: auto;
+  }
+}
+
+/* Larger screens */
+@media screen and (min-width: 1025px) {
+  .okr-tree-container {
+    width: 100%;
+  }
+}
+
+/* Fix for OKR filters background colors - ensure they work across all devices */
+.okr-node.business-unit-filtered,
+.okr-node.assigned-to-filtered {
+  position: relative;
+  z-index: 1;
+}
+
+.okr-node.business-unit-filtered {
+  background-color: #8fadd9 !important;
+}
+
+.okr-node.assigned-to-filtered {
+  background-color: #d179ba !important;
+}
+
+/* Fix for ReactFlow node background colors */
+.react-flow__node {
+  background: transparent !important;
+}
+
+.react-flow__node .okr-node.business-unit-filtered {
+  background-color: #8fadd9 !important;
+}
+
+.react-flow__node .okr-node.assigned-to-filtered {
+  background-color: #d179ba !important;
+}
+
+/* Extra specificity for filter display */
+div.business-unit-filtered {
+  background-color: #8fadd9 !important;
+}
+
+div.assigned-to-filtered {
+  background-color: #d179ba !important;
+}
+
+/* Reset button styling - always visible but with varying opacity */
+button:disabled {
+  cursor: not-allowed;
 }

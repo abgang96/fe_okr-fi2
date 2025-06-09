@@ -220,7 +220,7 @@ export default function ReviewForm() {
         user={JSON.parse(localStorage.getItem('user') || '{}')}
       />
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 content-with-fixed-header">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">
             Review: {formData?.user_name}'s {formData?.week}

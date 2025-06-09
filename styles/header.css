@@ -1,0 +1,147 @@
+/* Header styles for floating navigation */
+.header-fixed,
+header.bg-\[\#333333\].shadow.fixed,
+header.fixed {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  transition: all 0.3s ease-in-out;
+}
+
+/* Add smooth scrolling for better UX with fixed header */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 70px; /* Slightly more than header height to ensure anchors don't get hidden */
+}
+
+.header-scrolled,
+header.bg-\[\#333333\].shadow.fixed.shadow-lg {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Mobile menu positioning */
+.mobile-menu-container {
+  top: 64px; /* Match header height */
+  z-index: 99; /* Just below header */
+}
+
+/* Add padding to content areas to account for fixed header */
+.content-with-fixed-header,
+body,
+#__next,
+#__next > div,
+main,
+section,
+.page-container,
+.content-container,
+.okr-tree-container {
+  padding-top: 30px !important; /* Match header height */
+  margin-top: 0 !important;
+}
+
+/* Remove top margin from first child elements */
+main > *:first-child,
+section > *:first-child,
+.page-container > *:first-child,
+.content-container > *:first-child {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Z-index hierarchy for components */
+/* Ensure React Flow container works properly with fixed header */
+.react-flow__container {
+  z-index: 1; /* Lower than header z-index */
+}
+
+.react-flow__controls {
+  z-index: 5;
+}
+
+/* Modals and dialogs should be above the header */
+.modal, 
+.dialog,
+.dropdown-menu {
+  z-index: 110 !important;
+}
+
+/* Ensure modals and dialogs appear above fixed header */
+.modal-backdrop,
+.modal-overlay,
+.dialog-overlay {
+  z-index: 110; /* Higher than header z-index */
+}
+
+.modal-content,
+.dialog-content,
+.modal-container,
+.react-flow__minimap {
+  z-index: 120; /* Higher than backdrop overlay */
+}
+
+/* Fix dropdown menus in forms */
+.dropdown-menu,
+.select-dropdown,
+.autocomplete-dropdown {
+  z-index: 150 !important; /* Ensure dropdowns appear above everything */
+}
+
+/* Make sure OKR node colors appear properly */
+.react-flow__node .okr-node.business-unit-filtered,
+.react-flow__node .okr-node.assigned-to-filtered {
+  z-index: 5 !important;
+}
+
+.react-flow__node .okr-node.business-unit-filtered,
+.react-flow__node .okr-node.business-unit-filtered > div,
+.react-flow__node .okr-node .business-unit-filtered {
+  background-color: #8fadd9 !important;
+}
+
+.react-flow__node .okr-node.assigned-to-filtered,
+.react-flow__node .okr-node.assigned-to-filtered > div,
+.react-flow__node .okr-node .assigned-to-filtered {
+  background-color: #d179ba !important;
+}
+
+/* Fixed header adjustments */
+.header-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Main content adjustments */
+section,
+.page-container,
+.content-container,
+.okr-tree-container {
+  padding-top: 64px !important; /* Match header height */
+  margin-top: 0 !important;
+}
+
+/* Admin master specific adjustments */
+.container {
+  padding-top: 64px !important;
+}
+
+/* Responsive adjustments for the header */
+@media screen and (max-width: 640px) {
+  .content-with-fixed-header,
+  body,
+  #__next,
+  #__next > div,
+  main,
+  section,
+  .page-container,
+  .content-container,
+  .okr-tree-container {
+    padding-top: 30px !important; /* Keep consistent padding on mobile */
+    margin-top: 0 !important;
+  }
+}

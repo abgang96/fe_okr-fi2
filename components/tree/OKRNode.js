@@ -327,42 +327,52 @@ const OKRNode = ({ data, isConnectable }) => {
         type="target"
         position={Position.Top}
         isConnectable={isConnectable}
-      />      <div className={`okr-node ${typeof data.status === 'boolean' ? (data.status ? 'active' : 'inactive') : data.status?.toLowerCase()?.replace(' ', '-')} 
+      />      <div 
+        className={`okr-node ${typeof data.status === 'boolean' ? (data.status ? 'active' : 'inactive') : data.status?.toLowerCase()?.replace(' ', '-')} 
           ${data.isSelected || data.isChildOfSelected ? 'border-2' : 'border'}
-          ${data.borderColor || 'border-gray-300'}`}        style={{
+          ${data.borderColor || 'border-gray-300'}
+          ${data.matchesBusinessUnitFilter ? 'business-unit-filtered' : ''}
+          ${data.matchesAssignedToFilter ? 'assigned-to-filtered' : ''}`}        style={{
           borderColor: data.isSelected || data.isChildOfSelected ? 
             (data.borderColor ? data.borderColor.replace('border-', '').replace('-500', '') : 'blue') : 
             'gray',
-          backgroundColor: (data.isAssignedToCurrentUser || isUserAssigned) ? '#f2bb7c' : 'white' // Use both data flag and state to ensure it works
+          backgroundColor: data.matchesBusinessUnitFilter ? '#8fadd9 !important' : 
+                           data.matchesAssignedToFilter ? '#d179ba !important' : '',
+          zIndex: (data.matchesBusinessUnitFilter || data.matchesAssignedToFilter) ? 5 : 'auto'
         }}
         onClick={() => {
-          // Add debugging to check if data.isAssignedToCurrentUser is set correctly
-          if (data.isAssignedToCurrentUser) {
-            console.log(`OKR node ${data.okr_id} is assigned to current user`);
-          }
+          // Debug log to verify filter status
+          console.log(`OKR node ${data.okr_id} - ${data.name} - Filter status:`, {
+            matchesBusinessUnitFilter: data.matchesBusinessUnitFilter,
+            matchesAssignedToFilter: data.matchesAssignedToFilter,
+            backgroundColor: data.matchesBusinessUnitFilter ? '#8fadd9' : 
+                             data.matchesAssignedToFilter ? '#d179ba' : 'white'
+          });
         }}
-      >
-        <div 
-          className="cursor-pointer"
+      >          <div 
+          className={`cursor-pointer w-full h-full ${data.matchesBusinessUnitFilter ? '!bg-[#8fadd9]' : data.matchesAssignedToFilter ? '!bg-[#d179ba]' : ''}`}
+          style={{
+            backgroundColor: data.matchesBusinessUnitFilter ? '#8fadd9 !important' : 
+                            data.matchesAssignedToFilter ? '#d179ba !important' : ''
+          }}
           onClick={() => setIsExpanded(!isExpanded)}
-        >
-          <div className="flex justify-between items-center">
-            <h4 className="font-semibold text-gray-900 truncate" title={data.name || data.title}>
+        ><div className="flex justify-between items-center">
+            <h4 className="font-semibold text-gray-900 truncate text-sm sm:text-base" title={data.name || data.title}>
               {data.name || data.title}
             </h4>
             {data.isMeasurable && (
-              <div className="h-8 w-8">
+              <div className="h-6 w-6 sm:h-8 sm:w-8">
                 <ProgressCircle 
                   progress={data.progress_percent || data.progressPercent} 
-                  size={30} 
-                  strokeWidth={4} 
+                  size={24} 
+                  strokeWidth={3} 
                 />
               </div>
             )}
           </div>
           
-          <div className="flex justify-between mt-2 text-xs text-gray-600">
-            <span className={`px-2 py-1 rounded-full ${getStatusColor(data.status)}`}>
+          <div className="flex justify-between mt-1 sm:mt-2 text-xs text-gray-600">
+            <span className={`px-1 py-0.5 sm:px-2 sm:py-1 rounded-full ${getStatusColor(data.status)}`}>
               {typeof data.status === 'boolean' ? (data.status ? 'Active' : 'Inactive') : data.status}
             </span>
             <span>Due: {formatDate(data.due_date || data.dueDate)}</span>
@@ -387,14 +397,13 @@ const OKRNode = ({ data, isConnectable }) => {
             {/* Assigned Users Section */}
             <div className="mb-3">
               <h5 className="text-xs font-medium text-gray-700 mb-1">Assigned to:</h5>
-              {isLoadingUsers ? (
-                <div className="text-xs text-gray-500">Loading...</div>
+              {isLoadingUsers ? (              <div className="text-xs text-gray-500">Loading...</div>
               ) : assignedUsers.length > 0 ? (
                 <div className="flex flex-wrap gap-1">
                   {assignedUsers.map(user => (
-                    <div 
+                    <div
                       key={user.user_id}
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${user.is_primary ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}
+                      className={`inline-flex items-center px-1 py-0.5 sm:px-2 rounded-full text-xs ${user.is_primary ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}
                     >
                       {user.name}
                       {user.is_primary && (
@@ -409,8 +418,7 @@ const OKRNode = ({ data, isConnectable }) => {
                 </div>
               )}
             </div>
-            
-            <div className="flex space-x-2 mt-3">
+              <div className="flex flex-wrap gap-1 sm:gap-2 mt-2 sm:mt-3">
               {hasEditPermission() && (
                 <>
                   <button
@@ -418,9 +426,21 @@ const OKRNode = ({ data, isConnectable }) => {
                       e.stopPropagation();
                       setShowEditOKRForm(true);
                     }}
-                    className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded"
+                    className="text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded"
                   >
                     Edit
+                  </button>
+                  
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (typeof data.onAddSubObjective === 'function') {
+                        data.onAddSubObjective(data);
+                      }
+                    }}
+                    className="text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 bg-[#F6490D] hover:bg-[#E03D00] text-white rounded"
+                  >
+                    Add Sub
                   </button>
                   
                   <button
@@ -430,7 +450,6 @@ const OKRNode = ({ data, isConnectable }) => {
                         try {
                           await api.deleteOKR(data.okr_id);
                           alert('OKR deleted successfully');
-                          // Refresh the page to update the tree
                           window.location.reload();
                         } catch (error) {
                           console.error('Error deleting OKR:', error);
@@ -438,7 +457,7 @@ const OKRNode = ({ data, isConnectable }) => {
                         }
                       }
                     }}
-                    className="text-xs px-2 py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded"
+                    className="text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded"
                   >
                     Delete
                   </button>
@@ -448,22 +467,21 @@ const OKRNode = ({ data, isConnectable }) => {
           </div>
         )}
       </div>
-      
-      {/* Edit OKR Form Modal */}
+        {/* Edit OKR Form Modal */}
       {showEditOKRForm && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
           onClick={(e) => e.stopPropagation()}
           onWheel={(e) => e.stopPropagation()}
         >
           <div 
-            className="bg-white p-6 rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto" 
+            className="bg-white p-4 sm:p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto" 
             onClick={(e) => e.stopPropagation()}
             onWheel={(e) => e.stopPropagation()}
           >
-            <h3 className="text-xl font-semibold mb-4">
+            <h3 className="text-lg sm:text-xl font-semibold mb-4">
               Edit OKR: {data.name || data.title}
-            </h3>            <EditOKRForm 
+            </h3><EditOKRForm 
               okrData={{...data, assigned_users_details: assignedUsers}}
               users={users}
               departments={departments}

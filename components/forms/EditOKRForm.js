@@ -457,10 +457,8 @@ const EditOKRForm = ({ okrData, users = [], departments = [], businessUnits = []
               </div>
             ))}
           </div>
-        )}
-        
-        {showBusinessUnitDropdown && availableBusinessUnits.length > 0 && (
-          <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base overflow-auto">
+        )}        {showBusinessUnitDropdown && availableBusinessUnits.length > 0 && (
+          <div className="absolute z-50 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base overflow-auto">
             {availableBusinessUnits.map(bu => (
               <div
                 key={bu.id || bu.business_unit_id}
@@ -472,6 +470,53 @@ const EditOKRForm = ({ okrData, users = [], departments = [], businessUnits = []
             ))}
           </div>
         )}
+      </div>
+      
+      {/* Toggle container with specific z-index to prevent overlap with dropdowns */}
+      <div className="mb-5 relative z-0 mt-6">
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Status Toggle */}
+          <div className="mb-2 md:mb-0">
+            <label className="flex items-center text-sm font-medium text-gray-700 cursor-pointer">
+              <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                <input 
+                  type="checkbox" 
+                  name="status" 
+                  id="status" 
+                  checked={status === true}
+                  onChange={() => setStatus(!status)}
+                  className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                />
+                <label 
+                  htmlFor="status" 
+                  className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
+                ></label>
+              </div>
+              <span>Status</span>
+            </label>
+          </div>
+          
+          {/* Measurable Toggle */}
+          <div>
+            <label className="flex items-center text-sm font-medium text-gray-700 cursor-pointer">
+              <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                <input 
+                  type="checkbox" 
+                  name="isMeasurable" 
+                  id="isMeasurable" 
+                  checked={isMeasurable}
+                  onChange={() => setIsMeasurable(!isMeasurable)}
+                  className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                />
+                <label 
+                  htmlFor="isMeasurable" 
+                  className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
+                ></label>
+              </div>
+              <span>Measurable</span>
+            </label>
+          </div>
+        </div>
       </div>
       
       {/* Progress Percent Input - Only show if Measurable is toggled on */}
@@ -491,48 +536,6 @@ const EditOKRForm = ({ okrData, users = [], departments = [], businessUnits = []
           />
         </div>
       )}
-      
-      {/* Status Toggle */}
-      <div className="mb-4">
-        <label className="flex items-center text-sm font-medium text-gray-700 mb-1 cursor-pointer">
-          <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-            <input 
-              type="checkbox" 
-              name="status" 
-              id="status" 
-              checked={status === true}
-              onChange={() => setStatus(!status)}
-              className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
-            />
-            <label 
-              htmlFor="status" 
-              className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
-            ></label>
-          </div>
-          <span>Status</span>
-        </label>
-      </div>
-      
-      {/* Measurable Toggle */}
-      <div className="mb-4">
-        <label className="flex items-center text-sm font-medium text-gray-700 mb-1 cursor-pointer">
-          <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-            <input 
-              type="checkbox" 
-              name="isMeasurable" 
-              id="isMeasurable" 
-              checked={isMeasurable}
-              onChange={() => setIsMeasurable(!isMeasurable)}
-              className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
-            />
-            <label 
-              htmlFor="isMeasurable" 
-              className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
-            ></label>
-          </div>
-          <span>Measurable</span>
-        </label>
-      </div>
       
       <div className="flex justify-end space-x-2">
         <button

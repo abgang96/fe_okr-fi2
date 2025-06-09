@@ -59,7 +59,7 @@ export default async function handler(req, res) {
 
     // Primary backend endpoint for token exchange
     try {
-      console.log('Attempting backend token exchange...');
+      console.log('Attempting backend token exchange...');      
       const backendTokenResponse = await axios.post(
         `${API_BASE_URL}/api/auth/auth/`,
         {

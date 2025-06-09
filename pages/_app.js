@@ -1,4 +1,6 @@
 import '../styles/globals.css';
+import '../styles/header.css';
+import '../styles/okr-tree.css';
 import { useEffect, useState } from 'react';
 import { useTeamsContext } from '../lib/teamsHelpers';
 import teamsAuth from '../lib/teamsAuth';
@@ -84,10 +86,8 @@ function MyApp({ Component, pageProps }) {
       </div>
     );
   }
-  
-  // Show auth warning in development mode
-  if (isDevelopment && !user) {
-    return (
+    // Show auth warning in development mode
+  if (isDevelopment && !user) {    return (
       <>
         <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 m-4">
           <p className="text-yellow-700">
@@ -98,7 +98,6 @@ function MyApp({ Component, pageProps }) {
       </>
     );
   }
-  
   // Pass authentication details to all pages
   return <Component {...pageProps} user={user} isTeams={isTeams} teamsContext={context} />;
 }

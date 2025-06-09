@@ -86,8 +86,7 @@ export default function Home() {
       <Head>
         <title>OKR Dashboard</title>
       </Head>
-      <Header user={user} />
-      <main className="container mx-auto px-4 py-8">
+      <Header user={user} />      <main className="container mx-auto px-4 py-8 content-with-fixed-header">
         <OKRTree />
       </main>
     </div>

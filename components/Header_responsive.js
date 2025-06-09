@@ -9,7 +9,26 @@ const Header = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const mobileMenuRef = useRef(null);
+  
+  // Add scroll event listener to handle header appearance
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 10) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    
+    // Clean up the event listener
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   useEffect(() => {
     // Check authentication status on mount
@@ -72,10 +91,8 @@ const Header = () => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [mobileMenuRef]);
-
-  return (
-    <header className="bg-[#333333] shadow">
+  }, [mobileMenuRef]);  return (
+    <header className={`bg-[#333333] shadow fixed top-0 left-0 right-0 z-100 transition-all duration-300 ${isScrolled ? 'shadow-lg' : ''} header-fixed`} style={{boxShadow: isScrolled ? '0 4px 10px rgba(0, 0, 0, 0.2)' : ''}}>
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
@@ -180,14 +197,12 @@ const Header = () => {
         {isAuthenticated && (
           <>
             {/* Backdrop overlay */}
-            {isMobileMenuOpen && (
-              <div 
-                className="fixed inset-0 bg-black bg-opacity-50 z-40 sm:hidden"
+            {isMobileMenuOpen && (              <div 
+                className="fixed inset-0 bg-black bg-opacity-50 z-30 sm:hidden"
                 onClick={() => setIsMobileMenuOpen(false)}
               ></div>
-            )}
-            <div 
-              className={`${isMobileMenuOpen ? 'block' : 'hidden'} sm:hidden fixed right-0 left-0 top-16 w-full bg-[#333333] shadow-lg z-50 border-t border-gray-700`}
+            )}            <div 
+              className={`${isMobileMenuOpen ? 'block' : 'hidden'} sm:hidden fixed right-0 left-0 top-16 w-full bg-[#333333] shadow-lg z-40 border-t border-gray-700 mobile-menu-container`}
               ref={mobileMenuRef}
             >
               <div className="px-2 pt-2 pb-3 space-y-1">

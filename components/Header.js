@@ -3,34 +3,63 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import api from '../lib/api';
 
-const Header = () => {
+const Header = ({ user: initialUser }) => {
   const router = useRouter();
   const [isTeamMember, setIsTeamMember] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(initialUser);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [hasAdminAccess, setHasAdminAccess] = useState(false);
   const mobileMenuRef = useRef(null);
-
+  
+  // Add scroll event listener to handle header appearance
   useEffect(() => {
-    // Check authentication status on mount
+    const handleScroll = () => {
+      if (window.scrollY > 10) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    
+    // Clean up the event listener
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);  useEffect(() => {
+    // Check authentication and update user state
     const checkAuth = () => {
       const token = localStorage.getItem('accessToken');
       const userData = localStorage.getItem('user');
       const isAuth = !!token && !!userData;
+      
       setIsAuthenticated(isAuth);
-      if (isAuth) {
-        setUser(JSON.parse(userData));
+      if (isAuth && userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          setUser(currentUser => currentUser || parsedUser);
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+        }
       }
     };
 
-    checkAuth();
+    // Initialize from props or localStorage
+    if (initialUser) {
+      setUser(initialUser);
+      setIsAuthenticated(true);
+    } else {
+      checkAuth();
+    }
     
-    // Listen for storage events to update auth state
+    // Listen for storage events
     window.addEventListener('storage', checkAuth);
     return () => window.removeEventListener('storage', checkAuth);
-  }, []);
-  
-  // Check if the user has team members
+  }, [initialUser]);
+    // Check if the user has team members
   useEffect(() => {
     const checkTeamMembers = async () => {
       if (!isAuthenticated) return;
@@ -45,6 +74,36 @@ const Header = () => {
     };
     
     checkTeamMembers();
+  }, [isAuthenticated]);      // Check user access rights
+  useEffect(() => {
+    const checkAdminAccess = async () => {
+      if (!isAuthenticated) {
+        setHasAdminAccess(false);
+        return;
+      }
+      
+      try {
+        const accessData = await api.getCurrentUserAccess();
+        // Only set admin access to true if it's explicitly true
+        const hasAccess = accessData?.admin_master_access === true;
+        console.log('Setting admin access to:', hasAccess);
+        setHasAdminAccess(hasAccess);
+      } catch (error) {
+        console.error('Error checking admin access:', error);
+        setHasAdminAccess(false);
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          // If the error is authentication related, clear local storage and redirect
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          router.push('/test-auth');
+          // Assuming you have access to the auth logout function
+          // auth.logout();
+        }
+      }
+    };
+    
+    checkAdminAccess();
   }, [isAuthenticated]);
 
   const handleLogout = () => {
@@ -72,10 +131,8 @@ const Header = () => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [mobileMenuRef]);
-
-  return (
-    <header className="bg-[#333333] shadow">
+  }, [mobileMenuRef]);  return (
+    <header className={`bg-[#333333] shadow fixed top-0 left-0 right-0 z-100 transition-all duration-300 ${isScrolled ? 'shadow-lg' : ''} header-fixed`} style={{boxShadow: isScrolled ? '0 4px 10px rgba(0, 0, 0, 0.2)' : ''}}>
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
@@ -97,8 +154,7 @@ const Header = () => {
                   className={`${router.pathname.startsWith('/weekly-discussions') ? 'border-[#F6490D] text-white' : 'border-transparent text-gray-300 hover:text-white'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
                 >
                   O3 Weekly Discussions
-                </Link>
-                <Link 
+                </Link>                <Link 
                   href="/team-discussions" 
                   className={`${router.pathname.startsWith('/team-discussions') ? 'border-[#F6490D] text-white' : 'border-transparent text-gray-300 hover:text-white'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
                 >
@@ -110,6 +166,14 @@ const Header = () => {
                     className={`${router.pathname === '/configuration-master' ? 'border-[#F6490D] text-white' : 'border-transparent text-gray-300 hover:text-white'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
                   >
                     Configuration
+                  </Link>
+                )}
+                {hasAdminAccess && (
+                  <Link 
+                    href="/admin-master"
+                    className={`${router.pathname.startsWith('/admin-master') ? 'border-[#F6490D] text-white' : 'border-transparent text-gray-300 hover:text-white'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
+                  >
+                    Admin Master
                   </Link>
                 )}
               </div>
@@ -180,14 +244,12 @@ const Header = () => {
         {isAuthenticated && (
           <>
             {/* Backdrop overlay */}
-            {isMobileMenuOpen && (
-              <div 
-                className="fixed inset-0 bg-black bg-opacity-50 z-40 sm:hidden"
+            {isMobileMenuOpen && (              <div 
+                className="fixed inset-0 bg-black bg-opacity-50 z-30 sm:hidden"
                 onClick={() => setIsMobileMenuOpen(false)}
               ></div>
-            )}
-            <div 
-              className={`${isMobileMenuOpen ? 'block' : 'hidden'} sm:hidden fixed right-0 left-0 top-16 w-full bg-[#333333] shadow-lg z-50 border-t border-gray-700`}
+            )}            <div 
+              className={`${isMobileMenuOpen ? 'block' : 'hidden'} sm:hidden fixed right-0 left-0 top-16 w-full bg-[#333333] shadow-lg z-40 border-t border-gray-700 mobile-menu-container`}
               ref={mobileMenuRef}
             >
               <div className="px-2 pt-2 pb-3 space-y-1">
@@ -204,8 +266,7 @@ const Header = () => {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   O3 Weekly Discussions
-                </Link>
-                <Link 
+                </Link>                <Link 
                   href="/team-discussions" 
                   className={`${router.pathname.startsWith('/team-discussions') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'} block px-3 py-2 rounded-md text-base font-medium`}
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -219,6 +280,15 @@ const Header = () => {
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Configuration
+                  </Link>
+                )}
+                {hasAdminAccess && (
+                  <Link 
+                    href="/admin-master"
+                    className={`${router.pathname.startsWith('/admin-master') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'} block px-3 py-2 rounded-md text-base font-medium`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Admin Master
                   </Link>
                 )}
                 <div className="pt-2 pb-1 border-t border-gray-700">

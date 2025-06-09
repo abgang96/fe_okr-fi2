@@ -92,7 +92,6 @@ export default function WeeklyFormDetail() {
       setLoading(false);
     }
   };
-
   const handleInputChange = (questionId, field, value) => {
     setAnswers((prevAnswers) => {
       const updatedAnswer = {
@@ -106,8 +105,14 @@ export default function WeeklyFormDetail() {
           ...formErrors,
           [questionId]: 'Answer cannot exceed 250 characters'
         });
+      } else if (field === 'answer_description' && value.trim() === '') {
+        // Mark empty descriptive answers as errors
+        setFormErrors({
+          ...formErrors,
+          [questionId]: 'This question requires an answer'
+        });
       } else {
-        // Clear error if valid
+        // Clear error if valid input provided
         const newErrors = { ...formErrors };
         delete newErrors[questionId];
         setFormErrors(newErrors);
@@ -118,8 +123,7 @@ export default function WeeklyFormDetail() {
         [questionId]: updatedAnswer
       };
     });
-  };
-  const handleSubmit = async (e) => {
+  };  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Check for validation errors
@@ -133,11 +137,32 @@ export default function WeeklyFormDetail() {
       return;
     }
     
-    // Transform answers to array format
-    const answersArray = Object.values(answers).filter(answer => {
-      // Include if it has an option selected or description text
-      return answer.option_id || (answer.answer_description && answer.answer_description.trim() !== '');
+    // Check if all questions are answered
+    const unansweredQuestions = questions.filter(question => {
+      const answer = answers[question.question_id];
+      if (!answer) return true;
+      
+      if (question.type === 0) { // Descriptive
+        return !answer.answer_description || answer.answer_description.trim() === '';
+      } else { // Multiple choice
+        return !answer.option_id;
+      }
     });
+    
+    if (unansweredQuestions.length > 0) {
+      setError('Please answer all questions before submitting the form.');
+      
+      // Set form errors for all unanswered questions
+      const newErrors = { ...formErrors };
+      unansweredQuestions.forEach(question => {
+        newErrors[question.question_id] = 'This question requires an answer';
+      });
+      setFormErrors(newErrors);
+      return;
+    }
+    
+    // Transform answers to array format
+    const answersArray = Object.values(answers);
     
     try {
       setSubmitting(true);
@@ -164,10 +189,22 @@ export default function WeeklyFormDetail() {
       setSubmitting(false);
       console.error(err);
     }
-  };
-  const isSubmitDisabled = () => {
-    // Disable submit if there are errors, the form is for a future week, or we're currently submitting
+  };  const isSubmitDisabled = () => {
+    // Check if all questions are answered
+    const hasUnansweredQuestions = questions.some(question => {
+      const answer = answers[question.question_id];
+      if (!answer) return true;
+      
+      if (question.type === 0) { // Descriptive
+        return !answer.answer_description || answer.answer_description.trim() === '';
+      } else { // Multiple choice
+        return !answer.option_id;
+      }
+    });
+    
+    // Disable submit if there are errors, unanswered questions, the form is for a future week, or we're currently submitting
     return Object.keys(formErrors).length > 0 || 
+           hasUnansweredQuestions ||
            formData?.is_future || 
            submitting ||
            !formData?.can_edit;
@@ -228,7 +265,7 @@ export default function WeeklyFormDetail() {
       <Header 
         isAuthenticated={isAuthenticated} 
         user={JSON.parse(localStorage.getItem('user') || '{}')}
-      />      <div className="container mx-auto px-4 py-8">
+      />      <div className="container mx-auto px-4 py-8 content-with-fixed-header">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">{formData?.week || 'Weekly Discussion Form'}</h1>
           <Link href="/weekly-discussions">
@@ -242,33 +279,40 @@ export default function WeeklyFormDetail() {
           <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
             {successMessage}
           </div>
-        )}
-
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        )}        <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="p-6">
-          <div className="mb-4 flex items-center">
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-              formData?.status === 0 ? 'bg-gray-100 text-gray-800' :
-              formData?.status === 1 ? 'bg-yellow-100 text-yellow-800' :
-              'bg-green-100 text-green-800'
-            }`}>
-              {formData?.status_display || 'Unknown Status'}
-            </span>
+          <div className="mb-4">
+            <div className="flex items-center mb-3">
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                formData?.status === 0 ? 'bg-gray-100 text-gray-800' :
+                formData?.status === 1 ? 'bg-yellow-100 text-yellow-800' :
+                'bg-green-100 text-green-800'
+              }`}>
+                {formData?.status_display || 'Unknown Status'}
+              </span>
+            </div>
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+              <p className="text-sm text-blue-700">
+                <strong>Note:</strong> All questions marked with <span className="text-red-600">*</span> must be answered before the form can be submitted.
+              </p>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit}>
             {questions.map((question) => (
-              <div key={question.question_id} className="mb-6 pb-6 border-b border-gray-200">
-                <label className="block font-medium text-gray-700 mb-2">
-                  {question.question_name}
+              <div key={question.question_id} className="mb-6 pb-6 border-b border-gray-200">                <label className="block font-medium text-gray-700 mb-2">
+                  {question.question_name} <span className="text-red-600">*</span>
                 </label>
                 
                 {question.type === 0 ? (
                   // Descriptive question
                   <div>
                     <textarea
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      rows={4}                      maxLength={250}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        formErrors[question.question_id] ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      rows={4}                      
+                      maxLength={250}
                       value={answers[question.question_id]?.answer_description || ''}
                       onChange={(e) => handleInputChange(question.question_id, 'answer_description', e.target.value)}
                       disabled={formData?.is_future || (formData?.status === 2 && !formData?.can_edit)}
@@ -283,9 +327,9 @@ export default function WeeklyFormDetail() {
                       </span>
                     </div>
                   </div>
-                ) : (
-                  // Multiple choice question
-                  <div>                    {question.options.map((option) => (
+                ) : (                  // Multiple choice question
+                  <div className={`${formErrors[question.question_id] ? 'border border-red-500 p-3 rounded-md' : ''}`}>
+                    {question.options.map((option) => (
                       <div key={option.option_id} className="flex items-center mb-2">
                         <input
                           type="radio"

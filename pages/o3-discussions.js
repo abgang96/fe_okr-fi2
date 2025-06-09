@@ -79,7 +79,7 @@ export default function O3DiscussionsPage() {
   };
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-100">
       <Head>
         <title>O3 Discussions | OKR Tree</title>
         <meta name="description" content="Manage task discussions and challenges" />
@@ -92,7 +92,7 @@ export default function O3DiscussionsPage() {
         isTeamsContext={isTeamsContext} 
       />
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 content-with-fixed-header">
         {!isAuthenticated ? (
           <LoginForm onLogin={handleLogin} />
         ) : loading ? (
