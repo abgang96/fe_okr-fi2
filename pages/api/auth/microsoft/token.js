@@ -18,7 +18,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: 'Authorization code is required' });
     }
 
-    console.log('Exchanging code for tokens...');
+    console.log('Exchanging code for tokens....');
 
     // Exchange the authorization code for tokens with Microsoft
     const msTokenResponse = await axios.post(
