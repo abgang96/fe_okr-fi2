@@ -13,34 +13,91 @@ export default function AuthStart() {
         // Get platform info from URL if available
         const urlParams = new URLSearchParams(window.location.search);
         const platform = urlParams.get('platform') || 'unknown';
+          console.log(`Auth start - Platform from URL: ${platform}`);
+          // Check if we're in a Teams iframe first
+        const isInTeamsIframe = window.self !== window.top;
+        const isInTeamsPopup = window.opener && window.opener !== window;
         
-        console.log(`Auth start - Platform from URL: ${platform}`);
+        // Initialize the Teams SDK with a timeout
+        const initializeWithTimeout = async () => {
+          // Don't even try to initialize if not in Teams context to avoid the error
+          if (!isInTeamsIframe && !isInTeamsPopup) {
+            throw new Error('Not running in Teams context');
+          }
+          
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('SDK initialization timed out')), 15000);
+          });
+          
+          return Promise.race([
+            app.initialize(),
+            timeoutPromise
+          ]);
+        };
         
-        // Initialize the Teams SDK
-        await app.initialize();
-        setStatus('Teams SDK initialized');
+        try {
+          await initializeWithTimeout();
+          setStatus('Teams SDK initialized');
+        } catch (initError) {
+          const isNoParentError = initError.message && initError.message.includes('No Parent window');
+          const isNotInTeamsError = initError.message && initError.message.includes('Not running in Teams');
+          
+          if (isNoParentError || isNotInTeamsError) {
+            console.log('Running outside of Teams environment - switching to web auth flow');
+            setStatus('Running outside Teams - using web authentication');
+          } else {
+            console.warn(`Teams initialization failed: ${initError}. Proceeding with alternative authentication.`);
+            setStatus('Teams initialization failed - trying alternative auth method');
+          }
+        }
 
         try {
-          // Get client information to set approach
-          const context = await app.getContext();
+          // Get client information to set approach - also with timeout
+          const contextPromise = app.getContext();
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Context fetch timed out')), 5000);
+          });
+          
+          const context = await Promise.race([contextPromise, timeoutPromise])
+            .catch(err => {
+              console.warn(`Context fetch failed or timed out: ${err}. Using default context.`);
+              return { hostClientType: platform === 'Windows' ? 'desktop' : 'unknown' };
+            });
+            
           const clientType = context.hostClientType || 'unknown';
           setStatus(`Client detected: ${clientType} on ${platform}. Getting token...`);
-          
-          // Try to silently get token from Microsoft Teams with platform-specific settings
+            // Try to silently get token from Microsoft Teams with platform-specific settings
           const authParams = {
             resources: [window.location.origin]
           };
           
-          // Special handling for macOS - add more specific scope
+          // Platform-specific handling
           if (platform === 'macOS') {
             authParams.claims = JSON.stringify({
               access_token: {
                 safari_compatibility: { essential: true }  // Custom claim to help with Safari
               }
             });
+          } else if (platform === 'Windows') {
+            // Windows-specific auth params if needed
+            console.log('Using Windows-specific auth parameters');
+            authParams.claims = JSON.stringify({
+              access_token: {
+                windows_compatibility: { essential: true }  // Custom claim for Windows
+              }
+            });
           }
           
-          const token = await authentication.getAuthToken(authParams);
+          // Create a promise that times out after 20 seconds
+          const authTimeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Token acquisition timed out')), 20000);
+          });
+          
+          // Race the auth token acquisition against the timeout
+          const token = await Promise.race([
+            authentication.getAuthToken(authParams),
+            authTimeoutPromise
+          ]);
           
           setStatus('Authentication successful');
           console.log('Token obtained successfully');

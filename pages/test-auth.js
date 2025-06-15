@@ -50,10 +50,24 @@ const LoginPage = () => {
         
         // Try-catch for app.initialize() as it might fail in some environments
         try {
-          await app.initialize();
-          console.log("Teams SDK initialized successfully");
+          // Only try to initialize if in a Teams frame
+          if (isInTeams) {
+            await app.initialize();
+            console.log("Teams SDK initialized successfully");
+          } else {
+            console.log("Not in Teams iframe - skipping Teams SDK initialization");
+            setAuthStatus("Using web authentication (not in Teams)");
+          }
         } catch (initError) {
-          console.log("Teams SDK initialization failed, continuing with standard auth:", initError);
+          const isNoParentError = initError.message && initError.message.includes('No Parent window');
+          
+          if (isNoParentError) {
+            console.log("No Parent window error - application is running outside of Teams");
+            setAuthStatus("Using web authentication (Teams detection failed)");
+          } else {
+            console.log("Teams SDK initialization failed, continuing with standard auth:", initError);
+            setAuthStatus("Teams initialization failed - using web authentication");
+          }
         }
         
         // Check for existing authentication first

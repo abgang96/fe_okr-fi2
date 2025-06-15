@@ -730,8 +730,7 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
   
   // Set initial zoom level when ReactFlow instance is available
   useEffect(() => {
-    if (reactFlowInstance) {
-      // Set initial zoom to 2 levels above minimum (min zoom is 0.4, so 0.8 would be 2 steps above)
+    if (reactFlowInstance) {          // Set initial zoom to 2 levels above minimum (min zoom is 0.4, so 0.8 would be 2 steps above)
       const initialZoom = 0.8;
       // Center the view with the desired zoom level
       setTimeout(() => {
@@ -739,6 +738,29 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
       }, 100);
     }
   }, [reactFlowInstance]);
+  
+  // Log platform information for debugging
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const userAgent = window.navigator.userAgent;
+      const platform = window.navigator.platform || 'unknown';
+      const isInIframe = window.self !== window.top;
+      
+      console.log('Environment information:');
+      console.log(`Platform: ${platform}`);
+      console.log(`User Agent: ${userAgent}`);
+      console.log(`In iframe: ${isInIframe}`);
+      console.log(`Backend URL: ${process.env.NEXT_PUBLIC_API_URL || 'Using default backend URL'}`);
+      
+      // Check if the backend is actually accessible
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/health-check/`, {
+        method: 'GET',
+        mode: 'no-cors' // Just to test connectivity
+      })
+      .then(() => console.log('Backend connection successful'))
+      .catch(err => console.error('Backend connection failed:', err));
+    }
+  }, []);
     return (
     <div className="okr-tree-container h-screen pt-0">      {/* Combined Filter Row with dividers */}
       <div className="filter-row flex flex-wrap items-center mb-4 p-3 bg-gray-100 rounded gap-2">
