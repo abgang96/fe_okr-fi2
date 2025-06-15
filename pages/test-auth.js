@@ -103,7 +103,7 @@ const LoginPage = () => {
           try {
             // Set timeout to prevent infinite hanging
             const timeoutPromise = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error("Teams authentication timed out")), 10000);
+              setTimeout(() => reject(new Error("Teams authentication timed out")), 2000);
             });
             
             // Race between the auth attempt and timeout
