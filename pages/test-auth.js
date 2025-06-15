@@ -97,14 +97,54 @@ const LoginPage = () => {
         
         // Proceed with Teams authentication if in Teams
         if (isInTeams) {
-          setAuthStatus("Authenticating with Teams...");
+          // Get platform info for better error handling
+          const userAgent = window.navigator.userAgent;
+          let platform = 'unknown';
+          
+          if (userAgent.indexOf('Windows') !== -1) platform = 'Windows';
+          else if (userAgent.indexOf('Macintosh') !== -1) platform = 'macOS';
+          else if (userAgent.indexOf('Android') !== -1) platform = 'Android';
+          else if (userAgent.indexOf('iPhone') !== -1 || userAgent.indexOf('iPad') !== -1) platform = 'iOS';
+          
+          console.log(`Authenticating on platform: ${platform}`);
+          setAuthStatus(`Authenticating with Teams on ${platform}...`);
+          
+          // Check backend connectivity first
+          try {
+            setAuthStatus("Checking backend connectivity...");
+            const apiStartTime = Date.now();
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/health-check/`, { 
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' },
+              mode: 'cors'
+            });
+            const apiEndTime = Date.now();
+            
+            console.log(`Backend connectivity check: ${response.status}, latency: ${apiEndTime - apiStartTime}ms`);
+            
+            if (!response.ok) {
+              console.warn(`Backend returned status ${response.status}`);
+              setAuthStatus(`Backend connectivity issue detected (${response.status}), but continuing...`);
+            } else {
+              setAuthStatus(`Backend connectivity confirmed, proceeding with authentication...`);
+            }
+          } catch (apiError) {
+            console.error('Backend connectivity check failed:', apiError);
+            setAuthStatus(`Backend connectivity issue: ${apiError.message}, but continuing...`);
+          }
+          
           let teamsAuthAttempted = false;
           
           try {
+            // Set a longer timeout for Windows platform
+            const timeoutDuration = platform === 'Windows' ? 30000 : 15000;
+            
             // Set timeout to prevent infinite hanging
             const timeoutPromise = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error("Teams authentication timed out")), 10000);
+              setTimeout(() => reject(new Error(`Teams authentication timed out after ${timeoutDuration/1000}s on ${platform}`)), timeoutDuration);
             });
+            
+            console.log(`Setting authentication timeout to ${timeoutDuration}ms for ${platform}`);
             
             // Race between the auth attempt and timeout
             const user = await Promise.race([
@@ -123,11 +163,37 @@ const LoginPage = () => {
               return;
             }
           } catch (error) {
-            console.error('Teams authentication error:', error);
+            console.error(`Teams authentication error on ${platform}:`, error);
             setAuthStatus(`Teams auth failed: ${error.message}. Trying alternative method...`);
             
-            // For specific error cases in desktop teams, try fallback authentication
-            if (teamsAuthAttempted) {
+            // Special handling for Windows Teams client
+            if (platform === 'Windows') {
+              console.log('Applying Windows-specific fallback authentication');
+              try {
+                setAuthStatus("Trying Windows-specific authentication with popup...");
+                
+                // For Windows, use a larger popup and longer timeout
+                const authPromise = authentication.authenticate({
+                  url: window.location.origin + "/auth-start?platform=Windows",
+                  width: 800,  // Larger popup for Windows
+                  height: 600
+                });
+                
+                const popupTimeoutPromise = new Promise((_, reject) => {
+                  setTimeout(() => reject(new Error("Popup authentication timed out")), 40000); // Longer timeout
+                });
+                
+                await Promise.race([authPromise, popupTimeoutPromise]);
+                
+                // If successful, the page will be redirected by the returned token processing
+                return;
+              } catch (popupError) {
+                console.error('Windows-specific popup authentication failed:', popupError);
+                setAuthStatus(`Windows authentication failed: ${popupError.message}. Please try manual sign-in.`);
+              }
+            } 
+            // Standard fallback for other platforms
+            else if (teamsAuthAttempted) {
               try {
                 setAuthStatus("Trying authentication with popup...");
                 await authentication.authenticate({
@@ -135,7 +201,7 @@ const LoginPage = () => {
                   width: 600,
                   height: 535
                 });
-                // If successful, the page will be redirected by the returned token processing
+                // If successful, the page will be redirected by the token processing
                 return;
               } catch (popupError) {
                 console.error('Popup authentication failed:', popupError);
