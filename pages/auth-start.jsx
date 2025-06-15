@@ -5,11 +5,16 @@ import { app, authentication } from '@microsoft/teams-js';
 export default function AuthStart() {
   const [status, setStatus] = useState('Initializing authentication...');
   const [error, setError] = useState(null);
-
   useEffect(() => {
     const runAuth = async () => {
       try {
         setStatus('Initializing Teams SDK...');
+        
+        // Get platform info from URL if available
+        const urlParams = new URLSearchParams(window.location.search);
+        const platform = urlParams.get('platform') || 'unknown';
+        
+        console.log(`Auth start - Platform from URL: ${platform}`);
         
         // Initialize the Teams SDK
         await app.initialize();
@@ -19,12 +24,23 @@ export default function AuthStart() {
           // Get client information to set approach
           const context = await app.getContext();
           const clientType = context.hostClientType || 'unknown';
-          setStatus(`Client detected: ${clientType}. Getting token...`);
+          setStatus(`Client detected: ${clientType} on ${platform}. Getting token...`);
           
-          // Try to silently get token from Microsoft Teams
-          const token = await authentication.getAuthToken({
+          // Try to silently get token from Microsoft Teams with platform-specific settings
+          const authParams = {
             resources: [window.location.origin]
-          });
+          };
+          
+          // Special handling for macOS - add more specific scope
+          if (platform === 'macOS') {
+            authParams.claims = JSON.stringify({
+              access_token: {
+                safari_compatibility: { essential: true }  // Custom claim to help with Safari
+              }
+            });
+          }
+          
+          const token = await authentication.getAuthToken(authParams);
           
           setStatus('Authentication successful');
           console.log('Token obtained successfully');
@@ -32,7 +48,7 @@ export default function AuthStart() {
           // Send token back to main window
           authentication.notifySuccess(token);
         } catch (tokenError) {
-          setStatus('Error getting token, trying backup approach...');
+          setStatus(`Error getting token (${platform}), trying backup approach...`);
           console.error('Failed to get token:', tokenError);
           
           // Try fallback approach for specific errors
@@ -40,21 +56,61 @@ export default function AuthStart() {
              (tokenError.errorCode === 'consent_required' || 
               tokenError.errorCode === 'user_consent_pending' || 
               tokenError.errorCode === '500')) {
-            
-            try {
-              setStatus('Requesting user consent...');
+              try {
+              // Get platform info from URL if available
+              const urlParams = new URLSearchParams(window.location.search);
+              const platform = urlParams.get('platform') || 'unknown';
+              
+              setStatus(`Requesting user consent for ${platform}...`);
+              
+              // Adjust popup dimensions for macOS - larger size helps prevent popup issues
+              const popupWidth = platform === 'macOS' ? 800 : 600;
+              const popupHeight = platform === 'macOS' ? 650 : 535;
+              
               // Try to get a new token with fresh consent
               const consentToken = await authentication.authenticate({
                 url: window.location.href,
-                width: 600,
-                height: 535
+                width: popupWidth,
+                height: popupHeight
               });
               
               setStatus('Authentication with consent successful');
               authentication.notifySuccess(consentToken);
             } catch (consentError) {
-              setError(`Could not authenticate with consent: ${consentError.message}`);
-              authentication.notifyFailure('Failed to get token even with consent');
+              // Special handling for macOS authentication errors
+              const urlParams = new URLSearchParams(window.location.search);
+              const platform = urlParams.get('platform') || 'unknown';
+              
+              if (platform === 'macOS') {
+                setStatus('Retrying macOS authentication with fallback method...');
+                
+                try {
+                  // Use alternative approach for macOS - try the callback-based version
+                  await new Promise((resolve, reject) => {
+                    authentication.authenticate({
+                      url: window.location.href,
+                      width: 900,  // Even wider for macOS fallback
+                      height: 700, // Even taller for macOS fallback
+                      successCallback: (token) => {
+                        setStatus('macOS fallback authentication succeeded');
+                        authentication.notifySuccess(token);
+                        resolve(token);
+                      },
+                      failureCallback: (error) => {
+                        setError(`macOS fallback authentication failed: ${error}`);
+                        authentication.notifyFailure('Failed with macOS fallback');
+                        reject(error);
+                      }
+                    });
+                  });
+                } catch (macError) {
+                  setError(`Could not authenticate on macOS: ${macError.message || macError}`);
+                  authentication.notifyFailure('Failed on all macOS authentication attempts');
+                }
+              } else {
+                setError(`Could not authenticate with consent: ${consentError.message}`);
+                authentication.notifyFailure('Failed to get token even with consent');
+              }
             }
           } else {
             setError(`Authentication failed: ${tokenError.message}`);

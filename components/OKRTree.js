@@ -12,7 +12,7 @@ const nodeTypes = {
 };
 
 // Enhanced tree layout algorithm that prevents node collisions
-const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMembers = [], filterOptions = {}) => {
+const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMembers = [], filterOptions = {}, expandedNodes = {}) => {
   console.log('Building tree with OKRs:', okrsList);
   if (!okrsList || okrsList.length === 0) {
     console.log('No OKRs provided, returning empty tree');
@@ -38,10 +38,11 @@ const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMember
   // Find root OKRs (those without a parent_okr)
   const rootOKRs = okrsList.filter(okr => !okr.parent_okr).sort((a, b) => a.okr_id - b.okr_id);;
   console.log('Root OKRs found:', rootOKRs);
-    // Node dimensions and spacing - reduced by 20-30%
+  // Node dimensions and spacing - reduced by 20-30%
   const nodeWidth = 220; // Reduced from 280
-  const nodeHeight = 100; // Reduced from 130
-  const verticalSpacing = 150; // Reduced from 180
+  const defaultNodeHeight = 100; // Default unexpanded node height
+  const verticalSpacing = 150; // Base vertical spacing between nodes
+  const expandedVerticalSpacingFactor = 1.5; // Multiplier for spacing below expanded nodes
   const horizontalGap = 30;   // Reduced from 40
     // Build nodes array
   const nodes = [];
@@ -51,7 +52,16 @@ const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMember
   // Track node IDs to create proper edges
   const nodeIdMap = {}; // Maps okr_id to node id in the graph
   let nodeId = 1;
-  
+    // Calculate the height for a node based on whether it's expanded
+  const getNodeHeight = (nodeId) => {
+    // Check if this node is expanded in the expandedNodes map
+    const nodeKey = nodeId.toString();
+    if (expandedNodes[nodeKey] && expandedNodes[nodeKey].expanded) {
+      return expandedNodes[nodeKey].height || 380; // Use the stored height or default to 380
+    }
+    return defaultNodeHeight; // Default height for collapsed nodes
+  };
+
   // First pass: Calculate subtree widths for optimal node positioning
   const getSubtreeWidth = (okrId) => {
     const children = childrenMap[okrId] || [];
@@ -79,7 +89,9 @@ const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMember
     // Return the maximum of this node's width and its children's total width
     return Math.max(responsiveNodeWidth, childrenTotalWidth);
   };
-  
+    // Track the y-position offsets for each level to handle expanded nodes
+  const levelYOffsets = {};
+
   // Second pass: Position nodes using the calculated subtree widths
   const positionNodesInSubtree = (okrId, level, startX, parentX = null) => {
     const children = childrenMap[okrId] || [];
@@ -88,9 +100,17 @@ const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMember
     // Get screen width for responsive positioning
     const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
     
+    // Initialize level offset if not already set
+    if (levelYOffsets[level] === undefined) {
+      levelYOffsets[level] = 0;
+    }
+    
     // Calculate node center X position
     const nodeX = startX + (subtreeWidth / 2) - (nodeWidth / 2);
-    const nodeY = level * (screenWidth < 640 ? verticalSpacing * 0.9 : verticalSpacing);
+    
+    // Calculate node Y position with offset
+    const baseY = level * (screenWidth < 640 ? verticalSpacing * 0.9 : verticalSpacing);
+    const nodeY = baseY + levelYOffsets[level];
       // Create node
     const currentNodeId = `${nodeId}`;
     const okr = okrMap[okrId];
@@ -150,7 +170,9 @@ const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMember
         user => user.user_id === filterOptions.assignedTo
       );
     }
-      
+        // Check if this node is expanded
+    const isNodeExpanded = expandedNodes[currentNodeId]?.expanded || false;
+    
     nodes.push({
       id: currentNodeId,
       type: 'okrNode',
@@ -159,6 +181,7 @@ const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMember
       style: matchesBusinessUnitFilter ? { backgroundColor: '#dbeafe' } : {},
       data: {
         ...okr,
+        id: currentNodeId,
         level,
         isLeafNode: children.length === 0,
         users,
@@ -167,6 +190,7 @@ const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMember
         isAssignedToCurrentUser,
         matchesBusinessUnitFilter,
         matchesAssignedToFilter,
+        isExpanded: isNodeExpanded, // Pass expansion state to node
         onAddSubObjective: (okrData) => {
           if (typeof window !== 'undefined' && window.__okrTreeAddSubObjective) {
             window.__okrTreeAddSubObjective(okrData);
@@ -194,6 +218,22 @@ const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMember
           height: 20
         }
       });
+    }
+      // Calculate the vertical adjustment needed for next nodes at this level
+    // This is where the magic happens - we add extra space if this node is expanded
+    const currentNodeHeight = getNodeHeight(currentNodeId);
+    const expandedNodeAdjustment = isNodeExpanded ? 
+      (currentNodeHeight - defaultNodeHeight) * expandedVerticalSpacingFactor : 0;
+    
+    // Add this expansion to all subsequent levels' offsets
+    if (expandedNodeAdjustment > 0) {
+      for (let i = level + 1; i < 50; i++) { // Add to all subsequent levels, with a reasonable limit
+        if (levelYOffsets[i] === undefined) {
+          levelYOffsets[i] = expandedNodeAdjustment;
+        } else {
+          levelYOffsets[i] += expandedNodeAdjustment;
+        }
+      }
     }
     
     // Position children
@@ -243,6 +283,9 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
   const [selectedRootOkr, setSelectedRootOkr] = useState('all');
   // ReactFlow zoom control
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
+  
+  // Track expanded nodes and their heights for tree layout adjustment
+  const [expandedNodes, setExpandedNodes] = useState({});
   
   // User, department, and business unit states  
   const [users, setUsers] = useState([]);
@@ -467,7 +510,57 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
     } catch (error) {
       console.error('Error refreshing OKRs after iteration:', error);
     }
-  }, [filter])  // Update nodes with callbacks
+  }, [filter]);
+
+  // Handle node expansion/collapse - Define this before other functions that use it
+  const handleNodeExpand = useCallback((nodeData) => {
+    console.log('Node expand/collapse triggered:', nodeData);
+    
+    setExpandedNodes(prev => {
+      const newExpandedNodes = {
+        ...prev,
+        [nodeData.id]: {
+          expanded: nodeData.expanded,
+          height: nodeData.estimatedHeight
+        }
+      };
+      
+      console.log('Updated expanded nodes:', newExpandedNodes);
+      
+      // After updating expanded nodes state, recalculate layout
+      setTimeout(() => {
+        console.log('Recalculating tree layout after expansion change');
+        // Call directly rather than using updateTreeLayout to avoid dependency cycle
+        if (okrsList.length > 0) {
+          const { nodes: newNodes, edges: newEdges } = buildTreeStructure(
+            okrsList, 
+            users, 
+            currentUser, 
+            teamMembers, 
+            filterOptions, 
+            newExpandedNodes
+          );
+          
+          // Add callbacks to nodes
+          const nodesWithCallbacks = newNodes.map(node => ({
+            ...node,
+            data: {
+              ...node.data,
+              onContinueIteration: handleContinueIteration,
+              onNodeExpand: handleNodeExpand
+            }
+          }));
+          
+          setNodes(nodesWithCallbacks);
+          setEdges(newEdges);
+        }
+      }, 50);
+      
+      return newExpandedNodes;
+    });
+  }, [okrsList, users, currentUser, teamMembers, filterOptions, handleContinueIteration]);
+
+  // Update nodes with callbacks
   useEffect(() => {    
     if (okrsList.length > 0) {
       console.log('Building tree with OKRs:', {
@@ -477,7 +570,7 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
         children: okrsList[0].child_okrs
       });
 
-      const { nodes: treeNodes, edges: treeEdges } = buildTreeStructure(okrsList, users, currentUser, teamMembers, filterOptions);
+      const { nodes: treeNodes, edges: treeEdges } = buildTreeStructure(okrsList, users, currentUser, teamMembers, filterOptions, expandedNodes);
       console.log('Tree structure built:', {
         nodes: treeNodes.length,
         edges: treeEdges.length,
@@ -490,7 +583,8 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
         ...node,
         data: {
           ...node.data,
-          onContinueIteration: handleContinueIteration
+          onContinueIteration: handleContinueIteration,
+          onNodeExpand: handleNodeExpand
         }
       }));
       
@@ -499,8 +593,8 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
     } else {
       console.log('No OKRs available to build tree');
     }
-  }, [okrsList, users, currentUser, teamMembers, setNodes, setEdges, handleContinueIteration, filterOptions]);
-
+  }, [okrsList, users, currentUser, teamMembers, filterOptions, expandedNodes, handleContinueIteration, handleNodeExpand]);
+  
   // Filter users based on search input
   useEffect(() => {
     if (users && users.length > 0) {
