@@ -54,7 +54,7 @@ const MicrosoftAuthButton = ({ onLoginStart, onLoginComplete, onError, redirectT
       // Redirect to Microsoft login instead of opening a popup
       window.location.href = authUrl;
     } catch (error) {
-      console.error('Error initiating Microsoft login:', error);
+      console.error('Error initiating Microsoft login :', error);
       setIsLoggingIn(false);
       if (onError) onError(error);
     }
