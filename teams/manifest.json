@@ -1,63 +1,63 @@
 {
-  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.20/MicrosoftTeams.schema.json",
-  "version": "1.0.4",
-  "manifestVersion": "1.20",
-  "id": "2e2c26bf-ed0b-4e9a-abfe-2de047ce1c00",
-  "name": {
-    "short": "Tor AI OKR",
-    "full": "Tor AI OKR App"
-  },
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.14/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.14",
+  "version": "1.0.0",
+  "id": "00000000-0000-0000-0000-000000000000",
+  "packageName": "com.microsoft.teams.okrtree",
   "developer": {
-    "name": "Tor AI Technologies",
-    "websiteUrl": "https://fe-okr-fi2.vercel.app",
-    "privacyUrl": "https://fe-okr-fi2.vercel.app/",
-    "termsOfUseUrl": "https://fe-okr-fi2.vercel.app/"
-  },
-  "description": {
-    "short": "An OKR platform integrated with Microsoft Teams.",
-    "full": "Tor AI OKR provides a collaborative OKR platform with Teams and Azure AD integration for better team alignment and performance tracking."
+    "name": "OKR Tree",
+    "websiteUrl": "https://www.example.com",
+    "privacyUrl": "https://www.example.com/privacy",
+    "termsOfUseUrl": "https://www.example.com/termsofuse"
   },
   "icons": {
-    "outline": "outline.png",
-    "color": "color.png"
+    "color": "teams/color.png",
+    "outline": "teams/outline.png"
   },
-  "accentColor": "#FFFFFF",
+  "name": {
+    "short": "OKR Tree",
+    "full": "OKR Tree Manager"
+  },
+  "description": {
+    "short": "Visualize and manage your team's OKRs",
+    "full": "Track, visualize, and manage your team's Objectives and Key Results in a tree structure for better goal management and visibility."
+  },
+  "accentColor": "#6264A7",
+  "configurableTabs": [
+    {
+      "configurationUrl": "https://{yourAppDomain}/config",
+      "canUpdateConfiguration": true,
+      "scopes": [
+        "team",
+        "groupchat"
+      ]
+    }
+  ],
   "staticTabs": [
     {
-      "entityId": "okrTab",
-      "name": "OKRs",
-      "contentUrl": "https://fe-okr-fi2.vercel.app/",
-      "websiteUrl": "https://fe-okr-fi2.vercel.app/",
+      "entityId": "dashboard",
+      "name": "Dashboard",
+      "contentUrl": "https://{yourAppDomain}/",
+      "websiteUrl": "https://{yourAppDomain}/",
+      "scopes": [
+        "personal"
+      ]
+    },
+    {
+      "entityId": "tasks",
+      "name": "Your Tasks",
+      "contentUrl": "https://{yourAppDomain}/tasks",
+      "websiteUrl": "https://{yourAppDomain}/tasks",
       "scopes": [
         "personal"
       ]
     }
-  ],  "validDomains": [
-    "fe-okr-fi2.vercel.app",
-    "bd-okr.onrender.com",
-    "login.microsoftonline.com",
-    "graph.microsoft.com",
-    "*.microsoft.com"
-  ],  "webApplicationInfo": {
-    "id": "4f34222d-3d22-4855-9d70-6aa95971c511",
-    "resource": "https://graph.microsoft.com"
-  },
-  "devicePermissions": [
-    "openExternal",
-    "media"
   ],
-  "authorization": {
-    "permissions": {
-      "resourceSpecific": [
-        {
-          "name": "ChannelSettings.Read.Group",
-          "type": "Delegated"
-        },
-        {
-          "name": "TeamSettings.Read.Group",
-          "type": "Delegated"
-        }
-      ]
-    }
-  }
-}
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ],
+  "validDomains": [
+    "{yourAppDomain}"
+  ]
+} 

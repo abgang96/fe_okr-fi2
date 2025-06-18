@@ -4,7 +4,7 @@
   "/_document": "pages/_document.js",
   "/": "pages/index.js",
   "/test-auth": "pages/test-auth.js",
-  "/auth/microsoft-callback": "pages/auth/microsoft-callback.js",
-  "/api/auth/microsoft/token": "pages/api/auth/microsoft/token.js",
-  "/auth/error": "pages/auth/error.js"
+  "/weekly-discussions": "pages/weekly-discussions.js",
+  "/team-discussions": "pages/team-discussions.js",
+  "/admin-master": "pages/admin-master.js"
 }

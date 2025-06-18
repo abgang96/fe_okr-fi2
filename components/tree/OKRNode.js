@@ -5,18 +5,14 @@ import api from '../../lib/api';
 import EditOKRForm from '../forms/EditOKRForm';
 
 const OKRNode = ({ data, isConnectable }) => {
-  // Use expansion state from parent if provided, otherwise use local state
-  const [isExpanded, setIsExpanded] = useState(data.isExpanded || false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [showEditOKRForm, setShowEditOKRForm] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [businessUnits, setBusinessUnits] = useState([]);
   const [assignedUsers, setAssignedUsers] = useState([]);  
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [users, setUsers] = useState([]);
-  const [isUserAssigned, setIsUserAssigned] = useState(false);
-  
-  // Track node height for tree layout adjustment
-  const [nodeHeight, setNodeHeight] = useState(data.isExpanded ? 380 : 100);// Check if current user has edit permission for this OKR
+  const [isUserAssigned, setIsUserAssigned] = useState(false);// Check if current user has edit permission for this OKR
   const hasEditPermission = () => {
     // Give everyone access to edit/delete all OKRs
     return true;
@@ -325,14 +321,6 @@ const OKRNode = ({ data, isConnectable }) => {
   }, [assignedUsers, data]);
   */
   
-  // Sync expansion state with parent when data.isExpanded changes
-  useEffect(() => {
-    if (data.isExpanded !== undefined && data.isExpanded !== isExpanded) {
-      setIsExpanded(data.isExpanded);
-      setNodeHeight(data.isExpanded ? 380 : 100);
-    }
-  }, [data.isExpanded]);
-  
   return (
     <>
       <Handle
@@ -367,21 +355,7 @@ const OKRNode = ({ data, isConnectable }) => {
             backgroundColor: data.matchesBusinessUnitFilter ? '#8fadd9 !important' : 
                             data.matchesAssignedToFilter ? '#d179ba !important' : ''
           }}
-          onClick={() => {
-            const newExpandedState = !isExpanded;
-            setIsExpanded(newExpandedState);
-            
-            // Notify parent tree component about expansion state change
-            if (data.onNodeExpand) {
-              data.onNodeExpand({
-                id: data.id,
-                okrId: data.okr_id,
-                expanded: newExpandedState,
-                // Estimate expanded node height based on content
-                estimatedHeight: newExpandedState ? 380 : 100
-              });
-            }
-          }}
+          onClick={() => setIsExpanded(!isExpanded)}
         ><div className="flex justify-between items-center">
             <h4 className="font-semibold text-gray-900 truncate text-sm sm:text-base" title={data.name || data.title}>
               {data.name || data.title}

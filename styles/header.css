@@ -37,7 +37,7 @@ section,
 .page-container,
 .content-container,
 .okr-tree-container {
-  /* padding-top: 30px !important; Match header height */
+  padding-top: 30px !important; /* Match header height */
   margin-top: 0 !important;
 }
 
@@ -141,7 +141,7 @@ section,
   .page-container,
   .content-container,
   .okr-tree-container {
-    /* padding-top: 30px !important; Keep consistent padding on mobile */
+    padding-top: 30px !important; /* Keep consistent padding on mobile */
     margin-top: 0 !important;
   }
 }

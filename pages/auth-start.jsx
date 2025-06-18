@@ -5,99 +5,102 @@ import { app, authentication } from '@microsoft/teams-js';
 export default function AuthStart() {
   const [status, setStatus] = useState('Initializing authentication...');
   const [error, setError] = useState(null);
+  const [isMacOS, setIsMacOS] = useState(false);
+  // Enhanced macOS detection that works better in Teams
+  useEffect(() => {
+    if (typeof navigator !== 'undefined') {
+      const platform = navigator.platform || '';
+      const userAgent = navigator.userAgent || '';
+      // More comprehensive macOS detection
+      const isMac = platform.toLowerCase().includes('mac') || 
+                    userAgent.toLowerCase().includes('macintosh') ||
+                    userAgent.toLowerCase().includes('mac os x');
+      setIsMacOS(isMac);
+      console.log(`Platform detected: ${platform}, UserAgent: ${userAgent}, isMac: ${isMac}`);
+    }
+  }, []);
+
   useEffect(() => {
     const runAuth = async () => {
       try {
         setStatus('Initializing Teams SDK...');
         
-        // Get platform info from URL if available
-        const urlParams = new URLSearchParams(window.location.search);
-        const platform = urlParams.get('platform') || 'unknown';
-          console.log(`Auth start - Platform from URL: ${platform}`);
-          // Check if we're in a Teams iframe first
-        const isInTeamsIframe = window.self !== window.top;
-        const isInTeamsPopup = window.opener && window.opener !== window;
-        
-        // Initialize the Teams SDK with a timeout
-        const initializeWithTimeout = async () => {
-          // Don't even try to initialize if not in Teams context to avoid the error
-          if (!isInTeamsIframe && !isInTeamsPopup) {
-            throw new Error('Not running in Teams context');
-          }
-          
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('SDK initialization timed out')), 15000);
-          });
-          
-          return Promise.race([
-            app.initialize(),
-            timeoutPromise
-          ]);
-        };
-        
-        try {
-          await initializeWithTimeout();
-          setStatus('Teams SDK initialized');
-        } catch (initError) {
-          const isNoParentError = initError.message && initError.message.includes('No Parent window');
-          const isNotInTeamsError = initError.message && initError.message.includes('Not running in Teams');
-          
-          if (isNoParentError || isNotInTeamsError) {
-            console.log('Running outside of Teams environment - switching to web auth flow');
-            setStatus('Running outside Teams - using web authentication');
-          } else {
-            console.warn(`Teams initialization failed: ${initError}. Proceeding with alternative authentication.`);
-            setStatus('Teams initialization failed - trying alternative auth method');
-          }
-        }
-
-        try {
-          // Get client information to set approach - also with timeout
-          const contextPromise = app.getContext();
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Context fetch timed out')), 5000);
-          });
-          
-          const context = await Promise.race([contextPromise, timeoutPromise])
-            .catch(err => {
-              console.warn(`Context fetch failed or timed out: ${err}. Using default context.`);
-              return { hostClientType: platform === 'Windows' ? 'desktop' : 'unknown' };
-            });
-            
+        // Initialize the Teams SDK
+        await app.initialize();
+        setStatus('Teams SDK initialized');        try {
+          // Get client information to set approach
+          const context = await app.getContext();
           const clientType = context.hostClientType || 'unknown';
-          setStatus(`Client detected: ${clientType} on ${platform}. Getting token...`);
-            // Try to silently get token from Microsoft Teams with platform-specific settings
-          const authParams = {
-            resources: [window.location.origin]
-          };
-          
-          // Platform-specific handling
-          if (platform === 'macOS') {
-            authParams.claims = JSON.stringify({
-              access_token: {
-                safari_compatibility: { essential: true }  // Custom claim to help with Safari
+          const osPlatform = isMacOS ? 'macOS' : 'other OS';
+          setStatus(`Client detected: ${clientType} on ${osPlatform}. Getting token...`);
+            // Enhanced macOS-specific approach
+          if (isMacOS) {
+            console.log('Using enhanced macOS-specific authentication approach');
+            setStatus('Using macOS-specific authentication flow...');
+            
+            try {
+              // First try the legacy callback approach which works better on some macOS Teams clients
+              const macToken = await new Promise((resolve, reject) => {
+                try {
+                  // Set a timeout to avoid hanging
+                  const timeout = setTimeout(() => {
+                    reject(new Error('Authentication timed out'));
+                  }, 30000);
+                  
+                  // Use the legacy callback style which is more reliable on macOS
+                  authentication.authenticate({
+                    url: window.location.origin + '/auth-start',
+                    width: 600,
+                    height: 535,
+                    successCallback: (result) => {
+                      clearTimeout(timeout);
+                      console.log('MacOS auth success callback triggered');
+                      resolve(result);
+                    },
+                    failureCallback: (reason) => {
+                      clearTimeout(timeout);
+                      console.error('MacOS auth failure callback:', reason);
+                      reject(new Error(reason));
+                    }
+                  });
+                } catch (e) {
+                  reject(e);
+                }
+              });
+              
+              setStatus('MacOS authentication successful');
+              console.log('MacOS token obtained successfully');
+              authentication.notifySuccess(macToken);
+              return;
+            } catch (macError) {
+              console.error('MacOS specific auth failed:', macError);
+              
+              // If that fails, try a direct request to Microsoft authentication
+              try {
+                setStatus('Trying alternative macOS authentication...');
+                
+                // Use the modern Promise-based approach as backup
+                const alternativeToken = await authentication.authenticate({
+                  url: `${window.location.origin}/auth-start?retry=true`,
+                  width: 600,
+                  height: 535
+                });
+                
+                setStatus('Alternative macOS authentication successful');
+                authentication.notifySuccess(alternativeToken);
+                return;
+              } catch (altError) {
+                console.error('Alternative macOS auth failed:', altError);
+                // Continue to fallback approaches
               }
-            });
-          } else if (platform === 'Windows') {
-            // Windows-specific auth params if needed
-            console.log('Using Windows-specific auth parameters');
-            authParams.claims = JSON.stringify({
-              access_token: {
-                windows_compatibility: { essential: true }  // Custom claim for Windows
-              }
-            });
+            }
           }
           
-          // Create a promise that times out after 20 seconds
-          const authTimeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Token acquisition timed out')), 20000);
+          // Standard approach for other platforms
+          // Try to silently get token from Microsoft Teams
+          const token = await authentication.getAuthToken({
+            resources: [window.location.origin]
           });
-          
-          // Race the auth token acquisition against the timeout
-          const token = await Promise.race([
-            authentication.getAuthToken(authParams),
-            authTimeoutPromise
-          ]);
           
           setStatus('Authentication successful');
           console.log('Token obtained successfully');
@@ -105,7 +108,7 @@ export default function AuthStart() {
           // Send token back to main window
           authentication.notifySuccess(token);
         } catch (tokenError) {
-          setStatus(`Error getting token (${platform}), trying backup approach...`);
+          setStatus('Error getting token, trying backup approach...');
           console.error('Failed to get token:', tokenError);
           
           // Try fallback approach for specific errors
@@ -113,61 +116,21 @@ export default function AuthStart() {
              (tokenError.errorCode === 'consent_required' || 
               tokenError.errorCode === 'user_consent_pending' || 
               tokenError.errorCode === '500')) {
-              try {
-              // Get platform info from URL if available
-              const urlParams = new URLSearchParams(window.location.search);
-              const platform = urlParams.get('platform') || 'unknown';
-              
-              setStatus(`Requesting user consent for ${platform}...`);
-              
-              // Adjust popup dimensions for macOS - larger size helps prevent popup issues
-              const popupWidth = platform === 'macOS' ? 800 : 600;
-              const popupHeight = platform === 'macOS' ? 650 : 535;
-              
+            
+            try {
+              setStatus('Requesting user consent...');
               // Try to get a new token with fresh consent
               const consentToken = await authentication.authenticate({
                 url: window.location.href,
-                width: popupWidth,
-                height: popupHeight
+                width: 600,
+                height: 535
               });
               
               setStatus('Authentication with consent successful');
               authentication.notifySuccess(consentToken);
             } catch (consentError) {
-              // Special handling for macOS authentication errors
-              const urlParams = new URLSearchParams(window.location.search);
-              const platform = urlParams.get('platform') || 'unknown';
-              
-              if (platform === 'macOS') {
-                setStatus('Retrying macOS authentication with fallback method...');
-                
-                try {
-                  // Use alternative approach for macOS - try the callback-based version
-                  await new Promise((resolve, reject) => {
-                    authentication.authenticate({
-                      url: window.location.href,
-                      width: 900,  // Even wider for macOS fallback
-                      height: 700, // Even taller for macOS fallback
-                      successCallback: (token) => {
-                        setStatus('macOS fallback authentication succeeded');
-                        authentication.notifySuccess(token);
-                        resolve(token);
-                      },
-                      failureCallback: (error) => {
-                        setError(`macOS fallback authentication failed: ${error}`);
-                        authentication.notifyFailure('Failed with macOS fallback');
-                        reject(error);
-                      }
-                    });
-                  });
-                } catch (macError) {
-                  setError(`Could not authenticate on macOS: ${macError.message || macError}`);
-                  authentication.notifyFailure('Failed on all macOS authentication attempts');
-                }
-              } else {
-                setError(`Could not authenticate with consent: ${consentError.message}`);
-                authentication.notifyFailure('Failed to get token even with consent');
-              }
+              setError(`Could not authenticate with consent: ${consentError.message}`);
+              authentication.notifyFailure('Failed to get token even with consent');
             }
           } else {
             setError(`Authentication failed: ${tokenError.message}`);

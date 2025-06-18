@@ -12,10 +12,42 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { code } = req.body;
+    const { code, teamsToken, isMacOS } = req.body;
 
+    // Handle direct Teams token (for macOS fallback path)
+    if (teamsToken) {
+      console.log('Received Teams token directly, using macOS fallback path');
+      
+      try {
+        // Forward the token to the backend for validation
+        const backendResponse = await axios.post(
+          `${API_BASE_URL}/api/auth/teams/`,
+          {
+            token: teamsToken,
+            platform: 'macos'  // Indicate this is from a macOS client
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            timeout: 15000,  // Longer timeout for macOS
+          }
+        );
+        
+        console.log('macOS fallback authentication successful');
+        return res.status(200).json(backendResponse.data);
+      } catch (macOSError) {
+        console.error('macOS fallback authentication failed:', macOSError);
+        return res.status(500).json({
+          message: 'macOS authentication failed',
+          error: macOSError.message || 'Unknown error'
+        });
+      }
+    }
+
+    // Original authorization code flow
     if (!code) {
-      return res.status(400).json({ message: 'Authorization code is required' });
+      return res.status(400).json({ message: 'Authorization code or Teams token is required' });
     }
 
     console.log('Exchanging code for tokens...');
