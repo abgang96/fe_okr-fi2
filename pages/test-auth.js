@@ -14,7 +14,6 @@ const LoginPage = () => {
   const [userInfo, setUserInfo] = useState(null);
   const [authStatus, setAuthStatus] = useState("Checking authentication...");
   const router = useRouter();
-
   useEffect(() => {
     const runTeamsAuth = async () => {
       console.log("Starting authentication process");
@@ -24,7 +23,13 @@ const LoginPage = () => {
       const isInTeams = window.parent !== window.self;
       const isInTeamsPopup = window.opener && window.opener !== window;
       
-      console.log("Environment check: In Teams?", isInTeams, "In popup?", isInTeamsPopup);
+      // Detect macOS for specific handling
+      const userAgent = navigator.userAgent || '';
+      const isMacOS = (navigator.platform || '').toLowerCase().includes('mac') || 
+                    userAgent.toLowerCase().includes('macintosh') ||
+                    userAgent.toLowerCase().includes('mac os x');
+      
+      console.log("Environment check: In Teams?", isInTeams, "In popup?", isInTeamsPopup, "macOS?", isMacOS);
       
       // Special case for authentication popup window
       if (isInTeamsPopup) {
@@ -111,27 +116,90 @@ const LoginPage = () => {
           } catch (error) {
             console.error('Teams authentication error:', error);
             setAuthStatus(`Teams auth failed: ${error.message}. Trying alternative method...`);
-            
-            // For specific error cases in desktop teams, try fallback authentication
+                // For specific error cases in desktop teams, try fallback authentication
             if (teamsAuthAttempted) {
-              try {
-                setAuthStatus("Trying authentication with popup...");
-                await authentication.authenticate({
-                  url: window.location.origin + "/auth-start",
-                  width: 600,
-                  height: 535
-                });
-                // If successful, the page will be redirected by the returned token processing
-                return;
-              } catch (popupError) {
-                console.error('Popup authentication failed:', popupError);
-                setAuthStatus(`Popup authentication failed: ${popupError.message}`);
+              // Check if running on macOS for special handling
+              const userAgent = navigator.userAgent || '';
+              const isMacOS = (navigator.platform || '').toLowerCase().includes('mac') || 
+                          userAgent.toLowerCase().includes('macintosh') ||
+                          userAgent.toLowerCase().includes('mac os x');
+                          
+              if (isMacOS) {
+                // Special handling for macOS
+                try {
+                  setAuthStatus("Trying macOS-specific authentication...");
+                  // Use callback approach which works better on macOS Teams
+                  await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => reject(new Error("Authentication timed out")), 30000);
+                    
+                    authentication.authenticate({
+                      url: window.location.origin + "/auth-start?platform=macos",
+                      width: 600,
+                      height: 535,
+                      successCallback: (result) => {
+                        clearTimeout(timeout);
+                        console.log("macOS auth success:", result);
+                        resolve(result);
+                      },
+                      failureCallback: (error) => {
+                        clearTimeout(timeout);
+                        console.error("macOS auth failure:", error);
+                        reject(new Error(error || "Authentication failed"));
+                      }
+                    });
+                  });
+                  
+                  // If successful, the page will be redirected by the token processing
+                  return;
+                } catch (macOSError) {
+                  console.error('macOS authentication failed:', macOSError);
+                  setAuthStatus(`macOS authentication failed: ${macOSError.message}. Try refreshing the page.`);
+                }
+              } else {
+                // Standard popup authentication for non-macOS
+                try {
+                  setAuthStatus("Trying authentication with popup...");
+                  authentication.authenticate({
+                url: `${window.location.origin}/auth-start`,
+                width: 600,
+                height: 535,
+                successCallback: () => {
+                  console.log("Popup reported success, waiting for postMessage...");
+                  // Auth will continue when postMessage is received
+                },
+                failureCallback: (err) => {
+                  console.error("Popup failed auth:", err);
+                  setAuthStatus(`Popup authentication failed: ${err || 'Unknown error'}`);
+                  setIsAuthenticated(false);
+                }
+              });
+
+                  // If successful, the page will be redirected by the returned token processing
+                  return;
+                } catch (popupError) {
+                  console.error('Popup authentication failed:', popupError);
+                  setAuthStatus(`Popup authentication failed: ${popupError.message}`);
+                }
               }
             }
           }
         }
+          // If we reach here, Teams auth failed or we're not in Teams
         
-        // If we reach here, Teams auth failed or we're not in Teams
+        // Check for macOS Teams as a special case
+        const userAgent = navigator.userAgent || '';
+        const isMacOS = (navigator.platform || '').toLowerCase().includes('mac') || 
+                      userAgent.toLowerCase().includes('macintosh') ||
+                      userAgent.toLowerCase().includes('mac os x');
+        
+        if (isInTeams && isMacOS && teamsAuthAttempted) {
+          // For macOS Teams that failed regular auth, redirect to specialized fallback page
+          setAuthStatus("Redirecting to macOS specialized authentication...");
+          console.log("Redirecting to macOS fallback authentication page");
+          window.location.href = '/auth/macos-fallback';
+          return;
+        }
+        
         setAuthStatus("Ready for manual authentication");
         setIsAuthenticated(false);
         setIsLoading(false);

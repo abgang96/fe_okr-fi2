@@ -5,6 +5,20 @@ import { app, authentication } from '@microsoft/teams-js';
 export default function AuthStart() {
   const [status, setStatus] = useState('Initializing authentication...');
   const [error, setError] = useState(null);
+  const [isMacOS, setIsMacOS] = useState(false);
+  // Enhanced macOS detection that works better in Teams
+  useEffect(() => {
+    if (typeof navigator !== 'undefined') {
+      const platform = navigator.platform || '';
+      const userAgent = navigator.userAgent || '';
+      // More comprehensive macOS detection
+      const isMac = platform.toLowerCase().includes('mac') || 
+                    userAgent.toLowerCase().includes('macintosh') ||
+                    userAgent.toLowerCase().includes('mac os x');
+      setIsMacOS(isMac);
+      console.log(`Platform detected: ${platform}, UserAgent: ${userAgent}, isMac: ${isMac}`);
+    }
+  }, []);
 
   useEffect(() => {
     const runAuth = async () => {
@@ -13,14 +27,76 @@ export default function AuthStart() {
         
         // Initialize the Teams SDK
         await app.initialize();
-        setStatus('Teams SDK initialized');
-
-        try {
+        setStatus('Teams SDK initialized');        try {
           // Get client information to set approach
           const context = await app.getContext();
           const clientType = context.hostClientType || 'unknown';
-          setStatus(`Client detected: ${clientType}. Getting token...`);
+          const osPlatform = isMacOS ? 'macOS' : 'other OS';
+          setStatus(`Client detected: ${clientType} on ${osPlatform}. Getting token...`);
+            // Enhanced macOS-specific approach
+          if (isMacOS) {
+            console.log('Using enhanced macOS-specific authentication approach');
+            setStatus('Using macOS-specific authentication flow...');
+            
+            try {
+              // First try the legacy callback approach which works better on some macOS Teams clients
+              const macToken = await new Promise((resolve, reject) => {
+                try {
+                  // Set a timeout to avoid hanging
+                  const timeout = setTimeout(() => {
+                    reject(new Error('Authentication timed out'));
+                  }, 30000);
+                  
+                  // Use the legacy callback style which is more reliable on macOS
+                  authentication.authenticate({
+                    url: window.location.origin + '/auth-start',
+                    width: 600,
+                    height: 535,
+                    successCallback: (result) => {
+                      clearTimeout(timeout);
+                      console.log('MacOS auth success callback triggered');
+                      resolve(result);
+                    },
+                    failureCallback: (reason) => {
+                      clearTimeout(timeout);
+                      console.error('MacOS auth failure callback:', reason);
+                      reject(new Error(reason));
+                    }
+                  });
+                } catch (e) {
+                  reject(e);
+                }
+              });
+              
+              setStatus('MacOS authentication successful');
+              console.log('MacOS token obtained successfully');
+              authentication.notifySuccess(macToken);
+              return;
+            } catch (macError) {
+              console.error('MacOS specific auth failed:', macError);
+              
+              // If that fails, try a direct request to Microsoft authentication
+              try {
+                setStatus('Trying alternative macOS authentication...');
+                
+                // Use the modern Promise-based approach as backup
+                const alternativeToken = await authentication.authenticate({
+                  url: `${window.location.origin}/auth-start?retry=true`,
+                  width: 600,
+                  height: 535
+                });
+                
+                setStatus('Alternative macOS authentication successful');
+                authentication.notifySuccess(alternativeToken);
+                return;
+              } catch (altError) {
+                console.error('Alternative macOS auth failed:', altError);
+                // Continue to fallback approaches
+              }
+            }
+          }
           
+          // Standard approach for other platforms
           // Try to silently get token from Microsoft Teams
           const token = await authentication.getAuthToken({
             resources: [window.location.origin]
