@@ -12,43 +12,104 @@ export default function WeeklyDiscussions() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeFilter, setActiveFilter] = useState('All'); // Add filter state
   const router = useRouter();
+
+  const [user, setUser] = useState(null);
+  const [isClient, setIsClient] = useState(false);
   
   // Check authentication on load
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('auth_token');    
-    setIsAuthenticated(!!token);
-    if (!token) {
-      setError('You must be logged in to view weekly discussions.');
-      setLoading(false);
-    }
-  }, []);  
+  // useEffect(() => {
+  //   let token;
+  //   if (typeof window !== 'undefined') {
+  //     token = localStorage?.getItem('accessToken') || localStorage?.getItem('auth_token');
+  //   }   
+  //   setIsAuthenticated(!!token);
+  //   if (!token) {
+  //     setError('You must be logged in to view weekly discussions.');
+  //     setLoading(false);
+  //   }
+  // }, []);  
+  
+  // useEffect(() => {
+  //   const fetchForms = async () => {
+  //     if (!isAuthenticated) return;
+  //     try {
+  //       setLoading(true);
+  //       console.log("Fetching weekly forms...");
+  //       const formsData = await getMyWeeklyForms();
+  //       console.log("Retrieved forms data:", formsData);
+  //       setForms(formsData);
+  //     } catch (err) {
+  //       console.error("Error details:", {
+  //         message: err.message,
+  //         response: err.response?.data,
+  //         status: err.response?.status
+  //       });
+  //       if (err.response?.status === 401) {
+  //         setError('Authentication error. Please login again.');
+  //       } else {
+  //         setError('Failed to load weekly discussions. Please try again later.');
+  //       }
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+  //   fetchForms();
+  // }, [isAuthenticated]);
   
   useEffect(() => {
-    const fetchForms = async () => {
-      if (!isAuthenticated) return;
-      try {
-        setLoading(true);
-        console.log("Fetching weekly forms...");
-        const formsData = await getMyWeeklyForms();
-        console.log("Retrieved forms data:", formsData);
-        setForms(formsData);
-      } catch (err) {
-        console.error("Error details:", {
-          message: err.message,
-          response: err.response?.data,
-          status: err.response?.status
-        });
-        if (err.response?.status === 401) {
-          setError('Authentication error. Please login again.');
-        } else {
-          setError('Failed to load weekly discussions. Please try again later.');
-        }
-      } finally {
-        setLoading(false);
+  if (typeof window !== 'undefined') {
+    setIsClient(true);
+
+    try {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       }
-    };
-    fetchForms();
-  }, [isAuthenticated]);
+    } catch (e) {
+      console.error('Error parsing user from localStorage:', e);
+    }
+  }
+}, []);
+
+useEffect(() => {
+  let token;
+  if (typeof window !== 'undefined') {
+    token = localStorage?.getItem('accessToken') || localStorage?.getItem('auth_token');
+  }
+  setIsAuthenticated(!!token);
+  if (!token) {
+    setError('You must be logged in to view weekly discussions.');
+    setLoading(false);
+  }
+}, []);
+
+useEffect(() => {
+  const fetchForms = async () => {
+    if (!isAuthenticated) return;
+    try {
+      setLoading(true);
+      console.log("Fetching weekly forms...");
+      const formsData = await getMyWeeklyForms();
+      console.log("Retrieved forms data:", formsData);
+      setForms(formsData);
+    } catch (err) {
+      console.error("Error details:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
+      if (err.response?.status === 401) {
+        setError('Authentication error. Please login again.');
+      } else {
+        setError('Failed to load weekly discussions. Please try again later.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchForms();
+}, [isAuthenticated]);
+
   
   // Filter forms based on active filter
   const getFilteredForms = () => {
@@ -151,11 +212,19 @@ export default function WeeklyDiscussions() {
       <Head>
         <title>O3 WEEKLY DISCUSSION | OKR Tracker</title>
       </Head>
-      <Header
+      {/* <Header
         isAuthenticated={isAuthenticated}
-        user={JSON.parse(localStorage.getItem('user') || '{}')}
+        user={JSON.parse(localStorage?.getItem('user') || '{}')}
         hideTeamDiscussions={true}
-      />      <div className="container mx-auto px-4 py-4 sm:py-8 content-with-fixed-header">
+      /> */}
+      {isClient && (
+          <Header
+            isAuthenticated={isAuthenticated}
+            user={user}
+            hideTeamDiscussions={true}
+          />
+        )}
+      <div className="container mx-auto px-4 py-4 sm:py-8 content-with-fixed-header">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-xl sm:text-3xl font-bold">O3 WEEKLY DISCUSSION</h1>
           

@@ -17,10 +17,32 @@ export default function TeamDiscussions() {
   });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [expandedMembers, setExpandedMembers] = useState({});
+
+  const [user, setUser] = useState(null);
+  const [isClient, setIsClient] = useState(false);
+
+  // Ensure this only runs on client
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsClient(true);
+
+      try {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+      } catch (e) {
+        console.error('Error parsing user from localStorage:', e);
+      }
+    }
+  }, []);
   
   // Check authentication on load
   useEffect(() => {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('auth_token');
+    let token;
+    if (typeof window !== 'undefined') {
+      token = localStorage?.getItem('accessToken') || localStorage?.getItem('auth_token');
+    }
     setIsAuthenticated(!!token);
     
     if (!token) {
@@ -154,11 +176,19 @@ export default function TeamDiscussions() {
           <title>Team Discussions | OKR Tracker</title>
         </Head>
         
+        {/* <Header 
+          isAuthenticated={isAuthenticated} 
+          user={JSON.parse(localStorage?.getItem('user') || '{}')}
+          hideWeeklyDiscussions={true}
+        /> */}
+      
+      {isClient && (
         <Header 
           isAuthenticated={isAuthenticated} 
-          user={JSON.parse(localStorage.getItem('user') || '{}')}
+          user={user}
           hideWeeklyDiscussions={true}
         />
+      )}
         
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-8">
@@ -177,10 +207,16 @@ export default function TeamDiscussions() {
           <title>Error | OKR Tracker</title>
         </Head>
         
-        <Header 
+        {/* <Header 
           isAuthenticated={isAuthenticated} 
-          user={JSON.parse(localStorage.getItem('user') || '{}')}
-        />
+          user={JSON.parse(localStorage?.getItem('user') || '{}')}
+        /> */}
+        {isClient && (
+          <Header 
+            isAuthenticated={isAuthenticated} 
+            user={user}
+          />
+        )}
         
         <div className="container mx-auto px-4 py-8">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -218,10 +254,17 @@ export default function TeamDiscussions() {
         <title>Team Discussions | OKR Tracker</title>
       </Head>
       
-      <Header 
+      {/* <Header 
         isAuthenticated={isAuthenticated} 
-        user={JSON.parse(localStorage.getItem('user') || '{}')}
-      />
+        user={JSON.parse(localStorage?.getItem('user') || '{}')}
+      /> */}
+
+      {isClient && (
+        <Header 
+          isAuthenticated={isAuthenticated} 
+          user={user}
+        />
+      )}
       
       <div className="container mx-auto px-4 py-8 content-with-fixed-header">
         <div className="flex justify-between items-center mb-6">

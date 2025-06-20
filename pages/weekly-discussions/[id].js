@@ -8,6 +8,11 @@ import Header from '../../components/Header';
 export default function WeeklyFormDetail() {
   const router = useRouter();
   const { id } = router.query;
+
+
+  const [user, setUser] = useState(null);
+  const [isClient, setIsClient] = useState(false);
+  const [token, setToken] = useState(null);
   
   const [formData, setFormData] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -19,22 +24,159 @@ export default function WeeklyFormDetail() {
   const [formErrors, setFormErrors] = useState({});
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
-  // Check authentication on load
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('auth_token');
-    setIsAuthenticated(!!token);
+
+  // useEffect(() => {
+  //   setIsClient(true); // prevents SSR usage
+  //   try {
+  //     const userData = localStorage.getItem('user');
+  //     if (userData) {
+  //       setUser(JSON.parse(userData));
+  //     }
+  //   } catch (e) {
+  //     console.error('Failed to parse user from localStorage:', e);
+  //   }
+  // }, []);
+
+  //   if (!isClient) {
+  //   // SSR fallback or loading
+  //   return null;
+  // }
+
+  // useEffect(() => {
+  //   // This will only run on the client
+  //   try {
+  //     const access = localStorage.getItem('accessToken');
+  //     const auth = localStorage.getItem('auth_token');
+  //     setToken(access || auth);
+  //   } catch (e) {
+  //     console.error('Error accessing localStorage:', e);
+  //   }
+  // }, []);
+
+  // if (!token) {
+  //   return <div>Loading...</div>; // or redirect or something else
+  // }
+  
+  // // Check authentication on load
+  // useEffect(() => {
+  //   // let token;
+  //   // if (typeof window !== 'undefined') {
+  //   //   token = localStorage?.getItem('accessToken') || localStorage?.getItem('auth_token');
+  //   // }
+  //   setIsAuthenticated(!!token);
     
-    if (!token) {
-      setError('You must be logged in to view and submit weekly forms.');
-      setLoading(false);
-    }
-  }, []);
+  //   if (!token) {
+  //     setError('You must be logged in to view and submit weekly forms.');
+  //     setLoading(false);
+  //   }
+  // }, []);
+
+  // useEffect(() => {
+  //   setIsClient(true);
+
+  //   try {
+  //     const userData = localStorage.getItem('user');
+  //     if (userData) {
+  //       setUser(JSON.parse(userData));
+  //     }
+  //   } catch (e) {
+  //     console.error('Failed to parse user from localStorage:', e);
+  //   }
+
+  //   try {
+  //     const access = localStorage.getItem('accessToken');
+  //     const auth = localStorage.getItem('auth_token');
+  //     setToken(access || auth);
+  //   } catch (e) {
+  //     console.error('Error accessing localStorage:', e);
+  //   }
+  // }, []);
+
+  // // Check authentication after token is available
+  // useEffect(() => {
+  //   if (!isClient) return;
+
+  //   if (token) {
+  //     setIsAuthenticated(true);
+  //     setLoading(false);
+  //   } else {
+  //     setIsAuthenticated(false);
+  //     setError('You must be logged in to view and submit weekly forms.');
+  //     setLoading(false);
+  //   }
+  // }, [token, isClient]);
+
+  // if (!isClient || loading) {
+  //   return <div>Loading...</div>;
+  // }
+
+  // if (!isAuthenticated) {
+  //   return (
+  //     <div className="text-red-600">
+  //       {error || 'Unauthorized'}
+  //     </div>
+  //   );
+  // }
+  // useEffect(() => {
+  //   // Only fetch data when ID is available from the router and user is authenticated
+  //   if (id && isAuthenticated) {
+  //     fetchFormDetails();
+  //   }
+  // }, [id, isAuthenticated]);
+
   useEffect(() => {
-    // Only fetch data when ID is available from the router and user is authenticated
-    if (id && isAuthenticated) {
-      fetchFormDetails();
+  setIsClient(true);
+
+  try {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
     }
-  }, [id, isAuthenticated]);
+  } catch (e) {
+    console.error('Failed to parse user from localStorage:', e);
+  }
+
+  try {
+    const access = localStorage.getItem('accessToken');
+    const auth = localStorage.getItem('auth_token');
+    setToken(access || auth);
+  } catch (e) {
+    console.error('Error accessing localStorage:', e);
+  }
+}, []);
+
+useEffect(() => {
+  if (!isClient) return;
+
+  if (token) {
+    setIsAuthenticated(true);
+    setLoading(false);
+  } else {
+    setIsAuthenticated(false);
+    setError('You must be logged in to view and submit weekly forms.');
+    setLoading(false);
+  }
+}, [token, isClient]);
+
+useEffect(() => {
+  if (id && isAuthenticated) {
+    fetchFormDetails();
+  }
+}, [id, isAuthenticated]);
+
+// ✅ All hooks declared above this point — now we can conditionally render
+if (!isClient || loading) {
+  return <div>Loading...</div>;
+}
+
+if (!isAuthenticated) {
+  return (
+    <div className="text-red-600">
+      {error || 'Unauthorized'}
+    </div>
+  );
+}
+
   const fetchFormDetails = async () => {
     try {
       setLoading(true);
@@ -92,6 +234,7 @@ export default function WeeklyFormDetail() {
       setLoading(false);
     }
   };
+
   const handleInputChange = (questionId, field, value) => {
     setAnswers((prevAnswers) => {
       const updatedAnswer = {
@@ -216,10 +359,11 @@ export default function WeeklyFormDetail() {
           <title>Weekly Discussion Form | OKR Tracker</title>
         </Head>
         
-        <Header 
+        {/* <Header 
           isAuthenticated={isAuthenticated} 
-          user={JSON.parse(localStorage.getItem('user') || '{}')}
-        />
+          user={JSON.parse(localStorage?.getItem('user') || '{}')}
+        /> */}
+        <Header isAuthenticated={!!user} user={user} />
         
         <div className="container mx-auto px-4 py-8">
           <div className="flex justify-center items-center h-64">
@@ -262,10 +406,12 @@ export default function WeeklyFormDetail() {
         <title>{formData?.week || 'Weekly Discussion Form'} | OKR Tracker</title>
       </Head>
 
-      <Header 
+      {/* <Header 
         isAuthenticated={isAuthenticated} 
-        user={JSON.parse(localStorage.getItem('user') || '{}')}
-      />      <div className="container mx-auto px-4 py-8 content-with-fixed-header">
+        user={JSON.parse(localStorage?.getItem('user') || '{}')}
+      /> */}
+      <Header isAuthenticated={!!user} user={user} />
+      <div className="container mx-auto px-4 py-8 content-with-fixed-header">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">{formData?.week || 'Weekly Discussion Form'}</h1>
           <Link href="/weekly-discussions">

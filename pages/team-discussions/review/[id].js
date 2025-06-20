@@ -21,10 +21,31 @@ export default function ReviewForm() {
   const [formErrors, setFormErrors] = useState({});
   const [summaryComments, setSummaryComments] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  
+
+  const [user, setUser] = useState(null);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+  if (typeof window !== 'undefined') {
+    setIsClient(true);
+
+    try {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    } catch (err) {
+      console.error('Error reading user from localStorage:', err);
+    }
+    }
+  }, []);
+
   // Check authentication on load
   useEffect(() => {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('auth_token');
+    let token;
+    if (typeof window !== 'undefined') {
+      token = localStorage?.getItem('accessToken') || localStorage?.getItem('auth_token');
+    }
     setIsAuthenticated(!!token);
     
     if (!token) {
@@ -166,10 +187,16 @@ export default function ReviewForm() {
           <title>Team Member Review | OKR Tracker</title>
         </Head>
         
-        <Header 
+        {/* <Header 
           isAuthenticated={isAuthenticated} 
-          user={JSON.parse(localStorage.getItem('user') || '{}')}
-        />
+          user={JSON.parse(localStorage?.getItem('user') || '{}')}
+        /> */}
+        {isClient && (
+          <Header 
+            isAuthenticated={isAuthenticated} 
+            user={user}
+          />
+        )}
         
         <div className="container mx-auto px-4 py-8">
           <div className="flex justify-center items-center h-64">
@@ -187,10 +214,16 @@ export default function ReviewForm() {
           <title>Error | OKR Tracker</title>
         </Head>
         
-        <Header 
-          isAuthenticated={isAuthenticated} 
-          user={JSON.parse(localStorage.getItem('user') || '{}')}
-        />
+          {/* <Header 
+            isAuthenticated={isAuthenticated} 
+            user={JSON.parse(localStorage?.getItem('user') || '{}')}
+          /> */}
+        {isClient && (
+          <Header 
+            isAuthenticated={isAuthenticated} 
+            user={user}
+          />
+        )}
         
         <div className="container mx-auto px-4 py-8">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -215,10 +248,17 @@ export default function ReviewForm() {
         <title>Review {formData?.user_name}'s {formData?.week} | OKR Tracker</title>
       </Head>
       
-      <Header 
-        isAuthenticated={isAuthenticated} 
-        user={JSON.parse(localStorage.getItem('user') || '{}')}
-      />
+        {/* <Header 
+          isAuthenticated={isAuthenticated} 
+          user={JSON.parse(localStorage?.getItem('user') || '{}')}
+        /> */}
+      
+      {isClient && (
+        <Header 
+          isAuthenticated={isAuthenticated} 
+          user={user}
+        />
+      )}
       
       <div className="container mx-auto px-4 py-8 content-with-fixed-header">
         <div className="flex justify-between items-center mb-6">
