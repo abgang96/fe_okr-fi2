@@ -1,8 +1,4 @@
 {
-  "..\\node_modules\\@azure\\msal-browser\\dist\\telemetry\\BrowserPerformanceClient.mjs -> ./BrowserPerformanceMeasurement.mjs": {
-    "id": "..\\node_modules\\@azure\\msal-browser\\dist\\telemetry\\BrowserPerformanceClient.mjs -> ./BrowserPerformanceMeasurement.mjs",
-    "files": []
-  },
   "components\\auth\\AuthProvider.js -> ../../lib/msalAuth": {
     "id": "components\\auth\\AuthProvider.js -> ../../lib/msalAuth",
     "files": [
@@ -21,8 +17,24 @@
       "static/chunks/lib_msalAuth_js.js"
     ]
   },
+  "node_modules\\@azure\\msal-browser\\dist\\telemetry\\BrowserPerformanceClient.mjs -> ./BrowserPerformanceMeasurement.mjs": {
+    "id": "node_modules\\@azure\\msal-browser\\dist\\telemetry\\BrowserPerformanceClient.mjs -> ./BrowserPerformanceMeasurement.mjs",
+    "files": []
+  },
   "pages\\_app.js -> ../lib/msalAuth": {
     "id": "pages\\_app.js -> ../lib/msalAuth",
+    "files": [
+      "static/chunks/lib_msalAuth_js.js"
+    ]
+  },
+  "pages\\auth\\microsoft-callback.js -> ../../lib/msalAuth": {
+    "id": "pages\\auth\\microsoft-callback.js -> ../../lib/msalAuth",
+    "files": [
+      "static/chunks/lib_msalAuth_js.js"
+    ]
+  },
+  "pages\\test-auth.js -> ../lib/msalAuth": {
+    "id": "pages\\test-auth.js -> ../lib/msalAuth",
     "files": [
       "static/chunks/lib_msalAuth_js.js"
     ]

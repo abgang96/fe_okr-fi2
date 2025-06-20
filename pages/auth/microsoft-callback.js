@@ -38,6 +38,7 @@ const ClientCallback = () => {
   const router = useRouter();
   const [status, setStatus] = useState('Processing your login...');
   const [error, setError] = useState(null);
+  const [warning, setWarning] = useState(null);
   const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
@@ -82,7 +83,19 @@ const ClientCallback = () => {
             // Immediate redirect to home page (/) on successful authentication
             router.replace('/');
           }
-        } else {
+        } else if (result.type && result.type === 'warning') { 
+          if (isMounted) {
+            setStatus('Authentication in progress...');
+            setWarning(result.error || 'Failed to authenticate with Microsoft');
+          }
+          
+          // Redirect back to login page after a delay
+          setTimeout(() => {
+            if (isMounted) router.replace('/test-auth');
+          }, 1500);
+
+        }
+        else {
           if (isMounted) {
             setStatus('Authentication failed');
             setError(result.error || 'Failed to authenticate with Microsoft');
@@ -128,6 +141,11 @@ const ClientCallback = () => {
       {error && (
         <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
           {error}
+        </div>
+      )}
+      {warning && (
+        <div className="mt-4 p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+          {warning.toString()}
         </div>
       )}
     </div>

@@ -24,20 +24,20 @@ self.__BUILD_MANIFEST = {
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
-    "/admin-master": [
+    "/auth/microsoft-callback": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/admin-master.js"
-    ],
-    "/team-discussions": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/team-discussions.js"
+      "static/chunks/pages/auth/microsoft-callback.js"
     ],
     "/test-auth": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
       "static/chunks/pages/test-auth.js"
+    ],
+    "/weekly-discussions": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/weekly-discussions.js"
     ]
   },
   "ampFirstPages": []
