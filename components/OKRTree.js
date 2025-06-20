@@ -297,7 +297,7 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
           
           // Set the Assigned To filter to the current user automatically
           if (userData.teams_id) {
-            console.log('Setting Assigned To filter to current user:', userData.teams_id);
+            console.log('Setting Assigned To filter to  current user:', userData.teams_id);
             setSelectedAssignedTo(userData.teams_id);
             setFilterOptions(prev => ({
               ...prev,
