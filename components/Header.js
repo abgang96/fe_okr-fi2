@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import api from '../lib/api';
+import { useAuth } from './auth/AuthProvider';
 
 const Header = ({ user: initialUser }) => {
   const router = useRouter();
@@ -12,6 +13,7 @@ const Header = ({ user: initialUser }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [hasAdminAccess, setHasAdminAccess] = useState(false);
   const mobileMenuRef = useRef(null);
+  const { logout: msalLogout } = useAuth();
   
   // Add scroll event listener to handle header appearance
   useEffect(() => {
@@ -83,37 +85,74 @@ const Header = ({ user: initialUser }) => {
       }
       
       try {
+        // Get fresh access data from API
         const accessData = await api.getCurrentUserAccess();
+        
         // Only set admin access to true if it's explicitly true
         const hasAccess = accessData?.admin_master_access === true;
         console.log('Setting admin access to:', hasAccess);
         setHasAdminAccess(hasAccess);
+        
+        // Update local storage cache
+        try {
+          const userAccessCache = {
+            admin_master_access: hasAccess,
+            add_objective_access: accessData?.add_objective_access || false
+          };
+          localStorage.setItem('userAccess', JSON.stringify(userAccessCache));
+        } catch (cacheError) {
+          console.error('Error updating access cache:', cacheError);
+        }
       } catch (error) {
         console.error('Error checking admin access:', error);
         setHasAdminAccess(false);
+        
+        // Try to use cached values if API fails
+        try {
+          const accessStr = localStorage.getItem('userAccess');
+          if (accessStr) {
+            const cachedAccess = JSON.parse(accessStr);
+            setHasAdminAccess(cachedAccess?.admin_master_access === true);
+          } else {
+            setHasAdminAccess(false);
+          }
+        } catch (cacheError) {
+          console.error('Error reading cached access:', cacheError);
+          setHasAdminAccess(false);
+        }
+        
         if (error.response?.status === 401 || error.response?.status === 403) {
           // If the error is authentication related, clear local storage and redirect
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
           router.push('/test-auth');
-          // Assuming you have access to the auth logout function
-          // auth.logout();
+          // Use MSAL logout function if available
+          msalLogout?.();
         }
       }
     };
     
     checkAdminAccess();
   }, [isAuthenticated]);
-
-  const handleLogout = () => {
-    // Clear all authentication data
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    
-    // Redirect to Microsoft login page
-    router.push('/test-auth');
+  const handleLogout = async () => {
+    try {
+      // Use MSAL logout method to properly sign out
+      await msalLogout();
+      
+      // Also clear any local storage items for legacy compatibility
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      
+      console.log('Logged out, redirecting to test-auth page');
+        // Redirect to login page with logout flag
+      router.push('/test-auth?loggedout=true');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Still attempt to redirect even if logout fails
+      router.push('/test-auth');
+    }
   };
   
   // Get the display name - prefer user_name, then username, then email

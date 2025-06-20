@@ -281,18 +281,35 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
         if (userStr) {
           const userData = JSON.parse(userStr);
           setCurrentUser(userData);
-          try{
-
-          // Get access rights from localStorage if available
-          const accessStr = localStorage.getItem('userAccess');
-          if (accessStr) {
-            const accessData = JSON.parse(accessStr);
-            console.log('Using cached access data:', accessData);
-            setHasAddObjectiveAccess(accessData && accessData.add_objective_access === true);
-          }
+          
+          try {
+            // Get fresh access rights from API
+            const accessData = await api.getCurrentUserAccess();
+            console.log('Fetched user access data:', accessData);
+            
+            // Only allow access if add_objective_access is explicitly true
+            setHasAddObjectiveAccess(accessData?.add_objective_access === true);
+            console.log('Set add objective access to:', accessData?.add_objective_access === true);
+            
+            // Update local storage with new access data
+            localStorage.setItem('userAccess', JSON.stringify(accessData));
           } catch (accessError) {
             console.error('Error checking add objective access:', accessError);
-            setHasAddObjectiveAccess(false);
+            
+            // Fall back to cached access if API call fails
+            try {
+              const accessStr = localStorage.getItem('userAccess');
+              if (accessStr) {
+                const cachedAccessData = JSON.parse(accessStr);
+                console.log('Using cached access data:', cachedAccessData);
+                setHasAddObjectiveAccess(cachedAccessData?.add_objective_access === true);
+              } else {
+                setHasAddObjectiveAccess(false);
+              }
+            } catch (cacheError) {
+              console.error('Error reading cached access:', cacheError);
+              setHasAddObjectiveAccess(false);
+            }
           }
           
           // Set the Assigned To filter to the current user automatically

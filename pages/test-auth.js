@@ -1,342 +1,153 @@
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import React from 'react';
 import Head from 'next/head';
-import MicrosoftAuthButton from '../components/auth/MicrosoftAuthButton';
-import { api } from '../lib/api';
+import { useRouter } from 'next/router';
+import NoSSR from '../components/auth/NoSSR';
+import MicrosoftLoginButton from '../components/auth/MicrosoftLoginButton';
+import TeamsAuthHandler from '../components/auth/TeamsAuthHandler';
+import { useAuth } from '../components/auth/AuthProvider';
 
-import { app, authentication } from '@microsoft/teams-js';
-import { useTeamsAuth } from '../lib/teamsAuth';
+// Server-side placeholder
+const ServerContent = () => (
+  <div className="p-8">
+    <Head>
+      <title>Authentication Test</title>
+    </Head>
+    <h1 className="text-2xl font-bold mb-4">Authentication Test</h1>
+    <div className="animate-pulse w-full h-40 bg-gray-200 rounded-md"></div>
+  </div>
+);
 
-const LoginPage = () => {
-  const [authError, setAuthError] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [userInfo, setUserInfo] = useState(null);
-  const [authStatus, setAuthStatus] = useState("Checking authentication...");
+// Client-side implementation
+const ClientContent = () => {
+  const [status, setStatus] = React.useState("Initializing...");
+  const [userInfo, setUserInfo] = React.useState(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isTeams, setIsTeams] = React.useState(false);
+  const [redirecting, setRedirecting] = React.useState(false);
+  const [justLoggedOut, setJustLoggedOut] = React.useState(false);
   const router = useRouter();
-  useEffect(() => {
-    const runTeamsAuth = async () => {
-      console.log("Starting authentication process");
-      setAuthStatus("Initializing authentication...");
-      
-      // Check if we're in a Teams iframe
-      const isInTeams = window.parent !== window.self;
-      const isInTeamsPopup = window.opener && window.opener !== window;
-      
-      // Detect macOS for specific handling
-      const userAgent = navigator.userAgent || '';
-      const isMacOS = (navigator.platform || '').toLowerCase().includes('mac') || 
-                    userAgent.toLowerCase().includes('macintosh') ||
-                    userAgent.toLowerCase().includes('mac os x');
-      
-      console.log("Environment check: In Teams?", isInTeams, "In popup?", isInTeamsPopup, "macOS?", isMacOS);
-      
-      // Special case for authentication popup window
-      if (isInTeamsPopup) {
-        try {
-          setAuthStatus("Processing authentication popup...");
-          await app.initialize();
-          const token = await authentication.getAuthToken();
-          console.log("Got auth token from popup");
-          authentication.notifySuccess(token);
-          setIsLoading(false);
-        } catch (error) {
-          console.error('Popup auth failed:', error);
-          setAuthStatus(`Authentication popup failed: ${error.message || 'Unknown error'}`);
-          authentication.notifyFailure(error.message || 'Popup authentication failed');
-          setIsLoading(false);
-        }
-        return; // Don't run anything else in popup
-      }
-      
-      // Main authentication flow
-      try {
-        setAuthStatus("Initializing Teams SDK...");
-        
-        // Try-catch for app.initialize() as it might fail in some environments
-        try {
-          await app.initialize();
-          console.log("Teams SDK initialized successfully");
-        } catch (initError) {
-          console.log("Teams SDK initialization failed, continuing with standard auth:", initError);
-        }
-        
-        // Check for existing authentication first
-        const existingToken = localStorage.getItem('accessToken');
-        const userStr = localStorage.getItem('user');
-        
-        if (existingToken && userStr) {
-          try {
-            setAuthStatus("Verifying existing authentication...");
-            // Verify the token is still valid
-            const authCheck = await api.get('/api/auth/me/');
-            if (authCheck.data) {
-              console.log("Existing authentication is valid");
-              const userData = JSON.parse(userStr);
-              setIsAuthenticated(true);
-              setUserInfo(userData);
-              setIsLoading(false);
-              window.location.replace('/');
-              return;
-            }
-          } catch (error) {
-            console.log("Existing token validation failed, continuing with new authentication");
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('user');
-          }
-        }
-        
-        // Proceed with Teams authentication if in Teams
-        if (isInTeams) {
-          setAuthStatus("Authenticating with Teams...");
-          let teamsAuthAttempted = false;
-          
-          try {
-            // Set timeout to prevent infinite hanging
-            const timeoutPromise = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error("Teams authentication timed out")), 10000);
-            });
-            
-            // Race between the auth attempt and timeout
-            const user = await Promise.race([
-              useTeamsAuth(),
-              timeoutPromise
-            ]);
-            
-            teamsAuthAttempted = true;
-            
-            if (user) {
-              console.log("Teams authentication successful:", user);
-              setIsAuthenticated(true);
-              setUserInfo(user);
-              setIsLoading(false);
-              window.location.replace('/');
-              return;
-            }
-          } catch (error) {
-            console.error('Teams authentication error:', error);
-            setAuthStatus(`Teams auth failed: ${error.message}. Trying alternative method...`);
-                // For specific error cases in desktop teams, try fallback authentication
-            if (teamsAuthAttempted) {
-              // Check if running on macOS for special handling
-              const userAgent = navigator.userAgent || '';
-              const isMacOS = (navigator.platform || '').toLowerCase().includes('mac') || 
-                          userAgent.toLowerCase().includes('macintosh') ||
-                          userAgent.toLowerCase().includes('mac os x');
-                          
-              if (isMacOS) {
-                // Special handling for macOS
-                try {
-                  setAuthStatus("Trying macOS-specific authentication...");
-                  // Use callback approach which works better on macOS Teams
-                  await new Promise((resolve, reject) => {
-                    const timeout = setTimeout(() => reject(new Error("Authentication timed out")), 30000);
-                    
-                    authentication.authenticate({
-                      url: window.location.origin + "/auth-start?platform=macos",
-                      width: 600,
-                      height: 535,
-                      successCallback: (result) => {
-                        clearTimeout(timeout);
-                        console.log("macOS auth success:", result);
-                        resolve(result);
-                      },
-                      failureCallback: (error) => {
-                        clearTimeout(timeout);
-                        console.error("macOS auth failure:", error);
-                        reject(new Error(error || "Authentication failed"));
-                      }
-                    });
-                  });
-                  
-                  // If successful, the page will be redirected by the token processing
-                  return;
-                } catch (macOSError) {
-                  console.error('macOS authentication failed:', macOSError);
-                  setAuthStatus(`macOS authentication failed: ${macOSError.message}. Try refreshing the page.`);
-                }
-              } else {
-                // Standard popup authentication for non-macOS
-                try {
-                  setAuthStatus("Trying authentication with popup...");
-                  authentication.authenticate({
-                url: `${window.location.origin}/auth-start`,
-                width: 600,
-                height: 535,
-                successCallback: () => {
-                  console.log("Popup reported success, waiting for postMessage...");
-                  // Auth will continue when postMessage is received
-                },
-                failureCallback: (err) => {
-                  console.error("Popup failed auth:", err);
-                  setAuthStatus(`Popup authentication failed: ${err || 'Unknown error'}`);
-                  setIsAuthenticated(false);
-                }
-              });
 
-                  // If successful, the page will be redirected by the returned token processing
-                  return;
-                } catch (popupError) {
-                  console.error('Popup authentication failed:', popupError);
-                  setAuthStatus(`Popup authentication failed: ${popupError.message}`);
-                }
-              }
-            }
-          }
-        }
-          // If we reach here, Teams auth failed or we're not in Teams
-        
-        // Check for macOS Teams as a special case
-        const userAgent = navigator.userAgent || '';
-        const isMacOS = (navigator.platform || '').toLowerCase().includes('mac') || 
-                      userAgent.toLowerCase().includes('macintosh') ||
-                      userAgent.toLowerCase().includes('mac os x');
-        
-        if (isInTeams && isMacOS && teamsAuthAttempted) {
-          // For macOS Teams that failed regular auth, redirect to specialized fallback page
-          setAuthStatus("Redirecting to macOS specialized authentication...");
-          console.log("Redirecting to macOS fallback authentication page");
-          window.location.href = '/auth/macos-fallback';
-          return;
-        }
-        
-        setAuthStatus("Ready for manual authentication");
-        setIsAuthenticated(false);
-        setIsLoading(false);
-        
-      } catch (error) {
-        console.error('Authentication process error:', error);
-        setAuthStatus(`Authentication error: ${error.message}`);
-        setIsAuthenticated(false);
-        setIsLoading(false);
-      } finally {
-        // Ensure loading state is cleared after a maximum timeout
-        setTimeout(() => {
-          if (isLoading) {
-            console.log("Forcing end of loading state after timeout");
-            setIsLoading(false);
-            setAuthStatus("Authentication process timed out. Please try signing in manually.");
-          }
-        }, 15000);
-      }
-    };
+  // Get auth context using hook
+  const { user, isAuthenticated, loading, error, logout } = useAuth();
 
-    runTeamsAuth();
-  }, [isLoading]);  // Adding isLoading as dependency to prevent re-runs during state updates
+  // Check URL parameters for logout flag
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('loggedout') === 'true') {
+      setJustLoggedOut(true);
+      
+      // Remove the query parameter without page refresh
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, []);
 
-  // Handle successful login
-  const handleLoginComplete = async (userData) => {
-    try {
-      setAuthError(null);
-      setIsAuthenticated(true);
-      setUserInfo(userData);
+  // Check if we're running in Teams
+  React.useEffect(() => {
+    const isInIframe = window.self !== window.top;
+    setIsTeams(isInIframe);
+    setIsLoading(false);
+  }, []);
 
-      // Verify we can still access protected endpoints
-      await api.get('/api/auth/me/');
-
+  // Check authentication status and redirect if authenticated
+  React.useEffect(() => {
+    if (loading) return;
+    
+    // If authenticated, not already redirecting, and not just logged out, redirect to home page
+    if (isAuthenticated && user && !redirecting && !justLoggedOut) {
+      console.log("User is authenticated, redirecting to home page");
+      setStatus("Authenticated. Redirecting to home page...");
+      setUserInfo(user);
+      setRedirecting(true);
+      
       // Redirect to home page
-      window.location.replace('/');
+      router.replace('/');
+      return;
+    }
+
+    // If just logged out or not authenticated, show status
+    if (!isAuthenticated && !loading) {
+      setStatus("Not authenticated");
+    }
+  }, [isAuthenticated, user, loading, redirecting, router, justLoggedOut]);
+  
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      setIsLoading(true);
+      await logout();
+      setStatus("Logged out");
+      setUserInfo(null);
+      setJustLoggedOut(true);
     } catch (error) {
-      console.error('Login verification failed:', error);
-      handleLoginError(error);
+      console.error("Logout error:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  // Handle login error
-  const handleLoginError = (error) => {
-    console.error('Login error:', error);
-    setAuthError(error.message || 'Authentication failed');
-    setIsAuthenticated(false);
-    localStorage.clear();
-  };
-
-  // Show loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4">{authStatus}</p>
-          
-          {/* Add a timeout message after 5 seconds */}
-          {authStatus.includes("Checking") && (
-            <div className="mt-4 text-sm text-gray-500 max-w-md">
-              <p>If this takes longer than expected, you might need to:</p>
-              <ul className="list-disc pl-5 mt-2 text-left">
-                <li>Refresh the page</li>
-                <li>Try opening the app in a browser tab</li>
-                <li>Check your network connection</li>
-              </ul>
-              
-              <button 
-                onClick={() => setIsLoading(false)}
-                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-              >
-                Continue to sign-in
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // If already authenticated, show redirecting state
-  if (isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4">Redirecting to dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show login page
+  
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100">
+    <div className="p-8">
       <Head>
-        <title>Sign In - OKR Management</title>
+        <title>Authentication Test</title>
       </Head>
-      <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-              Sign in to OKR Management
-            </h2>
-            {authStatus && authStatus !== "Ready for manual authentication" && (
-              <p className="mt-2 text-center text-sm text-gray-600">
-                {authStatus}
-              </p>
-            )}
+      
+      <h1 className="text-2xl font-bold mb-4">Authentication Test</h1>
+      
+      <div className="mb-6 p-4 border rounded-md bg-gray-50">
+        <h2 className="font-bold mb-2">Status</h2>
+        <p className="mb-2">Authentication Status: <span className="font-medium">{status}</span></p>
+        <p className="mb-2">Environment: <span className="font-medium">{isTeams ? 'Microsoft Teams' : 'Browser'}</span></p>
+        {error && (
+          <p className="mb-2 text-red-600">Error: {error}</p>
+        )}
+      </div>
+      
+      {isAuthenticated && userInfo ? (
+        <>
+          <div className="mb-6 p-4 border rounded-md bg-green-50">
+            <h2 className="font-bold mb-2">User Information</h2>
+            <pre className="bg-gray-100 p-2 rounded overflow-auto max-h-60">
+              {JSON.stringify(userInfo, null, 2)}
+            </pre>
           </div>
-
-          {authError && (
-            <div className="rounded-md bg-red-50 p-4 mb-4">
-              <div className="flex">
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">
-                    Authentication Error
-                  </h3>
-                  <div className="mt-2 text-sm text-red-700">
-                    <p>{authError}</p>
-                  </div>
-                </div>
-              </div>
+          
+          <button
+            onClick={handleLogout}
+            disabled={isLoading}
+            className={`bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition-colors ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+          >
+            {isLoading ? 'Logging out...' : 'Logout'}
+          </button>
+        </>
+      ) : (
+        <div className="mb-6 p-4 border rounded-md">
+          <h2 className="font-bold mb-4">Login Options</h2>
+          
+          {isTeams ? (
+            <div className="mb-4">
+              <p className="mb-2">Microsoft Teams environment detected.</p>
+              <TeamsAuthHandler />
+            </div>
+          ) : (
+            <div className="mb-4">
+              <p className="mb-2">Choose an authentication method:</p>
+              <MicrosoftLoginButton className="mt-2" />
             </div>
           )}
-
-          <div className="mt-8 space-y-6">
-            <MicrosoftAuthButton
-              onLoginComplete={handleLoginComplete}
-              onLoginError={handleLoginError}
-            />
-          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
 
-export default LoginPage;
+// Main component with NoSSR pattern
+const TestAuth = () => {
+  return (
+    <NoSSR fallback={<ServerContent />}>
+      <ClientContent />
+    </NoSSR>
+  );
+};
+
+export default TestAuth;

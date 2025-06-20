@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import api from '../lib/api';
+import { useAuth } from './auth/AuthProvider';
 
 const Header = () => {
   const router = useRouter();
@@ -10,7 +11,9 @@ const Header = () => {
   const [user, setUser] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [hasAdminAccess, setHasAdminAccess] = useState(false);
   const mobileMenuRef = useRef(null);
+  const { logout: msalLogout } = useAuth();
   
   // Add scroll event listener to handle header appearance
   useEffect(() => {
@@ -65,15 +68,62 @@ const Header = () => {
     
     checkTeamMembers();
   }, [isAuthenticated]);
-
-  const handleLogout = () => {
-    // Clear all authentication data
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
+  
+  // Check admin access
+  useEffect(() => {
+    const checkAdminAccess = async () => {
+      if (!isAuthenticated) {
+        setHasAdminAccess(false);
+        return;
+      }
+      
+      try {
+        // Get fresh access data from API
+        const accessData = await api.getCurrentUserAccess();
+        
+        // Only set admin access to true if it's explicitly true
+        const hasAccess = accessData?.admin_master_access === true;
+        console.log('Setting admin access to:', hasAccess);
+        setHasAdminAccess(hasAccess);
+      } catch (error) {
+        console.error('Error checking admin access:', error);
+        setHasAdminAccess(false);
+        
+        // Try to use cached values if API fails
+        try {
+          const accessStr = localStorage.getItem('userAccess');
+          if (accessStr) {
+            const cachedAccess = JSON.parse(accessStr);
+            setHasAdminAccess(cachedAccess?.admin_master_access === true);
+          }
+        } catch (cacheError) {
+          console.error('Error reading cached access:', cacheError);
+          setHasAdminAccess(false);
+        }
+      }
+    };
     
-    // Redirect to Microsoft login page
-    router.push('/test-auth');
+    checkAdminAccess();
+  }, [isAuthenticated]);
+  
+  const handleLogout = async () => {
+    try {
+      // Clear all authentication data
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      
+      // Use MSAL logout method to properly sign out
+      await msalLogout();
+      
+      console.log('Logged out, redirecting to test-auth page');
+        // Redirect to login page with logout flag
+      router.push('/test-auth?loggedout=true');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Still attempt to redirect even if logout fails
+      router.push('/test-auth');
+    }
   };
   
   // Get the display name - prefer user_name, then username, then email
@@ -127,6 +177,15 @@ const Header = () => {
                     className={`${router.pathname === '/configuration-master' ? 'border-[#F6490D] text-white' : 'border-transparent text-gray-300 hover:text-white'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
                   >
                     Configuration
+                  </Link>
+                )}
+                {/* Only show Admin Master link if user has admin access */}
+                {hasAdminAccess && (
+                  <Link 
+                    href="/admin-master"
+                    className={`${router.pathname.startsWith('/admin-master') ? 'border-[#F6490D] text-white' : 'border-transparent text-gray-300 hover:text-white'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
+                  >
+                    Admin Master
                   </Link>
                 )}
               </div>
@@ -234,6 +293,16 @@ const Header = () => {
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Configuration
+                  </Link>
+                )}
+                {/* Only show Admin Master link if user has admin access */}
+                {hasAdminAccess && (
+                  <Link 
+                    href="/admin-master"
+                    className={`${router.pathname.startsWith('/admin-master') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'} block px-3 py-2 rounded-md text-base font-medium`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Admin Master
                   </Link>
                 )}
                 <div className="pt-2 pb-1 border-t border-gray-700">

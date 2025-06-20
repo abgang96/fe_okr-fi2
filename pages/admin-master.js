@@ -41,11 +41,19 @@ const AdminMaster = ({ user }) => {
           booleanAccess: Boolean(accessData?.admin_master_access)
         });
         
+        // Only allow access if admin_master_access is explicitly true (not just truthy)
         if (accessData && accessData.admin_master_access === true) {
           console.log('Admin access granted');
           setIsAuthorized(true);
+          
+          // Update cache
+          localStorage.setItem('userAccess', JSON.stringify({
+            admin_master_access: true,
+            add_objective_access: accessData?.add_objective_access || false
+          }));
         } else {
           console.log('Admin access denied:', accessData);
+          alert('You do not have permission to access the Admin Master page.');
           router.push('/');
         }
       } catch (error) {

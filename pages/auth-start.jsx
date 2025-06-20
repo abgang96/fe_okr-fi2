@@ -1,12 +1,17 @@
 // pages/auth-start.jsx 
 import { useEffect, useState } from 'react';
 import { app, authentication } from '@microsoft/teams-js';
+import { PublicClientApplication, InteractionType } from "@azure/msal-browser";
+import { msalConfig, loginRequest } from '../lib/msalConfig';
+import { msalAuth } from '../lib/msalAuth';
 
 export default function AuthStart() {
   const [status, setStatus] = useState('Initializing authentication...');
   const [error, setError] = useState(null);
   const [isMacOS, setIsMacOS] = useState(false);
-  // Enhanced macOS detection that works better in Teams
+  const [isInTeams, setIsInTeams] = useState(false);
+  
+  // Enhanced platform detection that works better in Teams
   useEffect(() => {
     if (typeof navigator !== 'undefined') {
       const platform = navigator.platform || '';
@@ -16,190 +21,105 @@ export default function AuthStart() {
                     userAgent.toLowerCase().includes('macintosh') ||
                     userAgent.toLowerCase().includes('mac os x');
       setIsMacOS(isMac);
-      console.log(`Platform detected: ${platform}, UserAgent: ${userAgent}, isMac: ${isMac}`);
+      
+      // Check if we're running in Teams
+      const isInIframe = window.self !== window.top;
+      setIsInTeams(isInIframe);
+      
+      console.log(`Platform detected: ${platform}, UserAgent: ${userAgent}, isMac: ${isMac}, inTeams: ${isInIframe}`);
     }
   }, []);
 
   useEffect(() => {
     const runAuth = async () => {
       try {
-        setStatus('Initializing Teams SDK...');
-        
-        // Initialize the Teams SDK
-        await app.initialize();
-        setStatus('Teams SDK initialized');        try {
-          // Get client information to set approach
-          const context = await app.getContext();
-          const clientType = context.hostClientType || 'unknown';
-          const osPlatform = isMacOS ? 'macOS' : 'other OS';
-          setStatus(`Client detected: ${clientType} on ${osPlatform}. Getting token...`);
-            // Enhanced macOS-specific approach
-          if (isMacOS) {
-            console.log('Using enhanced macOS-specific authentication approach');
-            setStatus('Using macOS-specific authentication flow...');
+        if (isInTeams) {
+          // Teams authentication flow
+          setStatus('Initializing Teams SDK...');
+          
+          try {
+            // Initialize the Teams SDK
+            await app.initialize();
+            setStatus('Teams SDK initialized');
             
-            try {
-              // First try the legacy callback approach which works better on some macOS Teams clients
-              const macToken = await new Promise((resolve, reject) => {
-                try {
-                  // Set a timeout to avoid hanging
-                  const timeout = setTimeout(() => {
-                    reject(new Error('Authentication timed out'));
-                  }, 30000);
-                  
-                  // Use the legacy callback style which is more reliable on macOS
-                  authentication.authenticate({
-                    url: window.location.origin + '/auth-start',
-                    width: 600,
-                    height: 535,
-                    successCallback: (result) => {
-                      clearTimeout(timeout);
-                      console.log('MacOS auth success callback triggered');
-                      resolve(result);
-                    },
-                    failureCallback: (reason) => {
-                      clearTimeout(timeout);
-                      console.error('MacOS auth failure callback:', reason);
-                      reject(new Error(reason));
-                    }
-                  });
-                } catch (e) {
-                  reject(e);
-                }
-              });
-              
-              setStatus('MacOS authentication successful');
-              console.log('MacOS token obtained successfully');
-              authentication.notifySuccess(macToken);
-              return;
-            } catch (macError) {
-              console.error('MacOS specific auth failed:', macError);
-              
-              // If that fails, try a direct request to Microsoft authentication
-              try {
-                setStatus('Trying alternative macOS authentication...');
-                
-                // Use the modern Promise-based approach as backup
-                const alternativeToken = await authentication.authenticate({
-                  url: `${window.location.origin}/auth-start?retry=true`,
-                  width: 600,
-                  height: 535
-                });
-                
-                setStatus('Alternative macOS authentication successful');
-                authentication.notifySuccess(alternativeToken);
-                return;
-              } catch (altError) {
-                console.error('Alternative macOS auth failed:', altError);
-                // Continue to fallback approaches
-              }
+            // Get client information
+            const context = await app.getContext();
+            const clientType = context.hostClientType || 'unknown';
+            const osPlatform = isMacOS ? 'macOS' : 'other OS';
+            setStatus(`Client detected: ${clientType} on ${osPlatform}. Getting token...`);
+            
+            // Get Teams SSO token
+            const token = await authentication.getAuthToken();
+            setStatus('Teams token acquired successfully');
+            
+            // Pass token back to parent/opener
+            if (window.opener) {
+              // For popup flow
+              authentication.notifySuccess(token);
+            } else {
+              // For tab flow - redirect back with token
+              window.location.href = `${window.location.origin}/test-auth?teamsToken=${encodeURIComponent(token)}`;
+            }
+          } catch (teamsError) {
+            console.error('Teams authentication error:', teamsError);
+            setError(`Teams auth error: ${teamsError.message}`);
+            setStatus('Authentication failed');
+            
+            if (window.opener) {
+              authentication.notifyFailure(teamsError.message);
             }
           }
+        } else {
+          // Standard browser authentication using MSAL
+          setStatus('Starting MSAL authentication flow...');
           
-          // Standard approach for other platforms
-          // Try to silently get token from Microsoft Teams
-          const token = await authentication.getAuthToken({
-            resources: [window.location.origin]
-          });
-          
-          setStatus('Authentication successful');
-          console.log('Token obtained successfully');
-          
-          // Send token back to main window
-          authentication.notifySuccess(token);
-        } catch (tokenError) {
-          setStatus('Error getting token, trying backup approach...');
-          console.error('Failed to get token:', tokenError);
-          
-          // Try fallback approach for specific errors
-          if (tokenError.errorCode && 
-             (tokenError.errorCode === 'consent_required' || 
-              tokenError.errorCode === 'user_consent_pending' || 
-              tokenError.errorCode === '500')) {
+          try {
+            // Create a new MSAL instance for this page
+            const msalInstance = new PublicClientApplication(msalConfig);
             
-            try {
-              setStatus('Requesting user consent...');
-              // Try to get a new token with fresh consent
-              const consentToken = await authentication.authenticate({
-                url: window.location.href,
-                width: 600,
-                height: 535
-              });
-              
-              setStatus('Authentication with consent successful');
-              authentication.notifySuccess(consentToken);
-            } catch (consentError) {
-              setError(`Could not authenticate with consent: ${consentError.message}`);
-              authentication.notifyFailure('Failed to get token even with consent');
+            // Set the active account if we have one
+            const accounts = msalInstance.getAllAccounts();
+            if (accounts.length > 0) {
+              msalInstance.setActiveAccount(accounts[0]);
             }
-          } else {
-            setError(`Authentication failed: ${tokenError.message}`);
-            authentication.notifyFailure(tokenError.message || 'Token fetch failed');
+            
+            // Start login redirect flow
+            await msalInstance.loginRedirect(loginRequest);
+            // The page will redirect to Microsoft, so no more code will run here
+          } catch (msalError) {
+            console.error('MSAL authentication error:', msalError);
+            setError(`Auth error: ${msalError.message}`);
+            setStatus('Authentication failed');
           }
         }
-      } catch (error) {
-        setError(`Critical error: ${error.message}`);
-        console.error('Failed to initialize or authenticate:', error);
-        authentication.notifyFailure(error.message || 'Authentication failed');
+      } catch (generalError) {
+        console.error('General authentication error:', generalError);
+        setError(`Error: ${generalError.message}`);
+        setStatus('Authentication failed');
       }
     };
-
-    runAuth();
-  }, []);
+    
+    // Start authentication process
+    if (!error) {
+      runAuth();
+    }
+  }, [isInTeams, isMacOS]);
 
   return (
-    <div style={{ textAlign: 'center', padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <div style={{ marginBottom: '20px' }}>
-        <img 
-          src="/tor.png" 
-          alt="App Logo" 
-          style={{ height: '50px', width: 'auto', marginBottom: '10px' }} 
-        />
-        <h2 style={{ color: '#444', margin: '10px 0' }}>Signing you in...</h2>
-      </div>
-      
-      <div style={{ 
-        padding: '15px', 
-        backgroundColor: '#f7f7f7', 
-        borderRadius: '5px',
-        marginBottom: '20px'
-      }}>
-        <p>{status}</p>
-        
-        {/* Progress indicator */}
-        {!error && (
-          <div style={{ 
-            margin: '15px auto', 
-            border: '4px solid #f3f3f3',
-            borderTop: '4px solid #3498db',
-            borderRadius: '50%',
-            width: '30px',
-            height: '30px',
-            animation: 'spin 2s linear infinite'
-          }} />
-        )}
-      </div>
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
+      <h1 className="text-xl font-bold mb-4">Authentication In Progress</h1>
+      <p className="mb-4">{status}</p>
       
       {error && (
-        <div style={{ 
-          padding: '15px', 
-          backgroundColor: '#fff3f3', 
-          color: '#d32f2f',
-          border: '1px solid #ffcdd2',
-          borderRadius: '5px', 
-          marginBottom: '20px'
-        }}>
-          <p><strong>Error:</strong> {error}</p>
-          <p style={{ marginTop: '10px' }}>Please close this window and try again.</p>
+        <div className="p-4 bg-red-50 text-red-700 rounded-md mt-4 max-w-md">
+          <h2 className="font-bold mb-2">Error</h2>
+          <p>{error}</p>
         </div>
       )}
       
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
+      <div className="mt-6">
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+      </div>
     </div>
   );
 }

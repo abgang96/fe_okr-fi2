@@ -4,7 +4,7 @@
   "/_document": "pages/_document.js",
   "/": "pages/index.js",
   "/test-auth": "pages/test-auth.js",
-  "/weekly-discussions": "pages/weekly-discussions.js",
   "/team-discussions": "pages/team-discussions.js",
-  "/admin-master": "pages/admin-master.js"
+  "/admin-master": "pages/admin-master.js",
+  "/weekly-discussions": "pages/weekly-discussions.js"
 }

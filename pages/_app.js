@@ -1,105 +1,107 @@
 import '../styles/globals.css';
 import '../styles/header.css';
 import '../styles/okr-tree.css';
-import { useEffect, useState } from 'react';
-import { useTeamsContext } from '../lib/teamsHelpers';
-import teamsAuth from '../lib/teamsAuth';
-import { configureApiAuth } from '../lib/teamsAuth';
-import api from '../lib/api';
+import { AuthProvider } from '../components/auth/AuthProvider';
+import { AuthAPIClientLoader } from '../lib/apiAuthConfig';
+import React, { useEffect } from 'react';
+import NoSSR from '../components/auth/NoSSR';
+import { useRouter } from 'next/router';
 
-// Development environment flag
-const isDevelopment = process.env.NODE_ENV === 'development';
-
-function MyApp({ Component, pageProps }) {
-  const { isTeams, context, loading: teamsLoading } = useTeamsContext();
-  const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
+// Component to initialize MSAL as early as possible and handle redirects
+const MsalInitializer = () => {
+  const [initStatus, setInitStatus] = React.useState('waiting');
+  const router = useRouter();
   
-  // Initialize authentication
   useEffect(() => {
-    const initAuth = async () => {
-      // Check if we're already authenticated
-      if (teamsAuth.checkAuth()) {
-        setUser(teamsAuth.user);
-        configureApiAuth();
-        setAuthLoading(false);
-        return;
-      }
-      
-      // Handle development environment - bypass Teams auth
-      if (isDevelopment && !isTeams) {
-        console.log('Development environment detected. Authentication bypass available at /test-auth');
+    // Skip handling redirects on the callback page itself
+    const isCallbackPage = router.pathname.includes('/auth/microsoft-callback');
+    const isTestAuth = router.pathname === '/test-auth';
+    
+    const initMsal = async () => {
+      try {
+        setInitStatus('initializing');
         
-        // Optional: Create a development user for testing
-        // Uncomment the following to automatically authenticate in development
-        /*
-        const devUser = {
-          id: 'dev-user-id',
-          username: 'dev-user',
-          email: 'dev@example.com',
-          department: 'Development'
-        };
-        setUser(devUser);
-        */
-      }
-        // Only try Teams authentication if we're in Teams context
-      if (isTeams && !teamsLoading && context) {
-        try {
-          const initialized = await teamsAuth.initialize();
-          if (!initialized) {
-            console.warn('Teams SDK initialization failed - continuing without Teams auth');
-            setAuthLoading(false);
-            return;
-          }
-          
-          console.log('Teams client type:', context.hostClientType || 'unknown');
-          const authenticatedUser = await teamsAuth.login();
-          
-          if (authenticatedUser) {
-            console.log('Authentication successful');
-            setUser(authenticatedUser);
-            configureApiAuth();
-          } else {
-            console.error('Authentication failed - no user returned');
-          }
-        } catch (error) {
-          console.error('Teams authentication failed:', error);
+        // Check if we just logged out (from query parameter)
+        const justLoggedOut = router.query.loggedout === 'true';
+        
+        // If we're on the test-auth page and just logged out, don't auto-redirect
+        if (isTestAuth && justLoggedOut) {
+          console.log("Just logged out on test-auth page, skipping auto-redirect");
+          setInitStatus('skipped-after-logout');
+          return;
         }
+        
+        // Dynamic import to avoid SSR issues
+        const { msalAuth } = await import('../lib/msalAuth');
+        
+        console.log("Pre-initializing MSAL from _app.js");
+        const success = await msalAuth.ensureInitialized();
+        
+        if (success) {
+          console.log("MSAL pre-initialization complete");
+          setInitStatus('success');
+          
+          // Handle redirect if we're not on the callback page
+          if (!isCallbackPage) {
+            try {
+              // Try to handle any pending redirects
+              console.log("Checking for redirect response in _app.js");
+              const response = await msalAuth.handleRedirectResponse();
+              
+              if (response && response.success) {
+                console.log("Redirect handled successfully in _app.js");
+                
+                // If we're on test-auth page and user is authenticated,
+                // and not just logged out, redirect to home
+                if (isTestAuth && !justLoggedOut) {
+                  console.log("On test-auth page with authenticated user, redirecting to home");
+                  router.replace('/');
+                }
+              }
+            } catch (redirectError) {
+              console.error("Error handling redirect in _app.js:", redirectError);
+            }
+          }
+        } else {
+          console.error("MSAL pre-initialization failed");
+          setInitStatus('failed');
+        }
+      } catch (e) {
+        console.error("MSAL pre-initialization error:", e);
+        setInitStatus('failed');
       }
-      
-      setAuthLoading(false);
     };
     
-    initAuth();
-  }, [isTeams, teamsLoading, context]);
+    // Start initialization on mount
+    initMsal();
+    
+    // No cleanup needed - let initialization complete even if component unmounts
+  }, [router.pathname, router.query]);
   
-  // Show loading state while Teams is initializing
-  if (teamsLoading || authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-blue-600" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
-          <p className="mt-2">Loading...</p>
-        </div>
+  // This component doesn't render anything visible
+  return null;
+};
+
+/**
+ * Main app component
+ * Implements a strict separation between client and server rendering
+ */
+function MyApp({ Component, pageProps }) {
+  return (
+    <AuthProvider>
+      {/* Auth API client loader - only runs on client */}
+      <AuthAPIClientLoader />
+      
+      {/* Initialize MSAL early - only on client side */}
+      <NoSSR>
+        <MsalInitializer />
+      </NoSSR>
+      
+      <div className="app-container">
+        <Component {...pageProps} />
       </div>
-    );
-  }
-    // Show auth warning in development mode
-  if (isDevelopment && !user) {    return (
-      <>
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 m-4">
-          <p className="text-yellow-700">
-            <strong>Development Mode:</strong> You're not authenticated. Visit <a href="/test-auth" className="underline">the test auth page</a> to authenticate, or continue as an unauthenticated user.
-          </p>
-        </div>
-        <Component {...pageProps} user={user} isTeams={isTeams} teamsContext={context} />
-      </>
-    );
-  }
-  // Pass authentication details to all pages
-  return <Component {...pageProps} user={user} isTeams={isTeams} teamsContext={context} />;
+    </AuthProvider>
+  );
 }
 
 export default MyApp;

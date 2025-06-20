@@ -4,89 +4,61 @@ import { useRouter } from 'next/router';
 import OKRTree from '../components/OKRTree';
 import Header from '../components/Header';
 import { api } from '../lib/api';
+import { useAuth } from '../components/auth/AuthProvider';
 
 export default function Home() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     const checkAuth = async () => {
-      if (typeof window === 'undefined') {
-        return;
-      }
-
       try {
-        // Get authentication data from localStorage
-        const token = localStorage.getItem('accessToken');
-        const userStr = localStorage.getItem('user');
-        const isAuth = localStorage.getItem('isAuthenticated');
-
-        if (!token || !userStr || isAuth !== 'true') {
-          throw new Error('No valid authentication found');
+        // Wait for auth to complete loading
+        if (authLoading) {
+          return;
         }
 
-        try {
-          // Parse user data and verify authentication
-          const userData = JSON.parse(userStr);
-          
-          // Verify token with backend
-          const response = await api.get('/api/auth/me/');
-          
-          if (!response.data) {
-            throw new Error('Invalid authentication response');
-          }
-
-          // Update user data
-          const updatedUser = {
-            ...userData,
-            ...response.data
-          };
-
-          setUser(updatedUser);
-          setIsAuthenticated(true);
-          localStorage.setItem('user', JSON.stringify(updatedUser));
-
-        } catch (apiError) {
-          console.error('API verification failed:', apiError);
-          throw new Error('Failed to verify authentication');
+        // If not authenticated, redirect to test-auth
+        if (!isAuthenticated || !user) {
+          router.push('/test-auth');
+          return;
         }
+        
+        // Auth verification successful
+        setIsLoading(false);
       } catch (error) {
         console.error('Auth check failed:', error);
-        localStorage.clear();
-        window.location.replace('/test-auth');
-      } finally {
-        setIsLoading(false);
+        router.push('/test-auth');
       }
     };
-
+    
     checkAuth();
-  }, [router]);
+  }, [isAuthenticated, user, authLoading, router]);
 
-  // Show loading state
-  if (isLoading) {
+  // Show loading state while auth is being checked
+  if (isLoading || authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4">Loading...</p>
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4 mx-auto"></div>
+          <p>Loading application...</p>
         </div>
       </div>
     );
   }
 
-  // If not authenticated, the useEffect will handle redirection
-  if (!isAuthenticated || !user) {
-    return null;
-  }
-
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div>
       <Head>
-        <title>OKR Dashboard</title>
+        <title>OKR Tree</title>
+        <meta name="description" content="OKR Management Application" />
+        <link rel="icon" href="/favicon.ico" />
       </Head>
-      <Header user={user} />      <main className="container mx-auto px-4 py-8 content-with-fixed-header">
+
+      <Header user={user} />
+
+      <main className="container mx-auto px-4 py-6">
         <OKRTree />
       </main>
     </div>
