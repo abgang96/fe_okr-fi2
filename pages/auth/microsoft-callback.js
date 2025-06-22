@@ -129,28 +129,139 @@ const ClientCallback = () => {
     };
   }, [router]);
 
+  
+  
+  //  useEffect(() => {
+  //   let isMounted = true;
+
+  //   const processRedirect = async () => {
+  //     try {
+  //       // If we've already processed this session, skip re-processing
+  //       if (sessionStorage.getItem('authProcessed') === 'true') {
+  //         console.log('Auth already processed, skipping...');
+  //         router.replace('/');
+  //         return;
+  //       }
+
+  //       // Parse error params from URL
+  //       const urlParams = new URLSearchParams(window.location.search);
+  //       const urlError = urlParams.get('error');
+  //       const urlErrorDescription = urlParams.get('error_description');
+
+  //       if (urlError) {
+  //         console.error('Auth error in URL:', urlError, urlErrorDescription);
+  //         if (isMounted) {
+  //           setStatus('Authentication failed');
+  //           setError(urlErrorDescription || urlError);
+  //         }
+
+  //         return setTimeout(() => {
+  //           if (isMounted) router.replace('/test-auth');
+  //         }, 1500);
+  //       }
+
+  //       // Dynamically import to avoid SSR crash
+  //       const { msalAuth } = await import('../../lib/msalAuth');
+
+  //       if (isMounted) setStatus('Completing Microsoft authentication...');
+
+  //       const result = await msalAuth.handleRedirectResponse();
+  //       console.log('Code processed:', result);
+
+  //       if (result.success) {
+  //         if (isMounted) {
+  //           setStatus('Authentication successful! Redirecting...');
+  //           sessionStorage.setItem('authProcessed', 'true');
+  //           setRedirecting(true);
+  //           router.replace('/');
+  //         }
+  //       } else if (result.type === 'warning') {
+  //         if (isMounted) {
+  //           setStatus('Authentication warning...');
+  //           setWarning(result.error || 'Microsoft login issue');
+  //         }
+  //         return setTimeout(() => {
+  //           if (isMounted) router.replace('/test-auth');
+  //         }, 1500);
+  //       } else {
+  //         if (isMounted) {
+  //           setStatus('Authentication failed');
+  //           setError(result.error || 'Could not complete Microsoft sign-in');
+  //         }
+  //         return setTimeout(() => {
+  //           if (isMounted) router.replace('/test-auth');
+  //         }, 1500);
+  //       }
+  //     } catch (err) {
+  //       console.error('Redirect processing error:', err);
+  //       if (isMounted) {
+  //         setStatus('Authentication error');
+  //         setError(err?.message || 'Unexpected error occurred');
+  //       }
+  //       return setTimeout(() => {
+  //         if (isMounted) router.replace('/test-auth');
+  //       }, 1500);
+  //     }
+  //   };
+
+  //   processRedirect();
+
+  //   return () => {
+  //     isMounted = false;
+  //   };
+  //  }, [router]);
+  
+  
+  // return (
+  //   <div className="flex flex-col items-center justify-center min-h-screen p-5">
+  //     <Head>
+  //       <title>Authentication in progress...</title>
+  //     </Head>
+  //     <div className="text-2xl mb-4">{String(status)}</div>
+  //     {!error && (
+  //       <div className="w-16 h-16 border-t-4 border-blue-500 border-solid rounded-full animate-spin"></div>
+  //     )}
+  //     {error && (
+  //       <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+  //         {String(error)}
+  //       </div>
+  //     )}
+  //     {warning && (
+  //       <div className="mt-4 p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+  //         {String(warning)}
+  //       </div>
+  //     )}
+  //   </div>
+  // );
+  
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-5">
-      <Head>
-        <title>Authentication in progress...</title>
-      </Head>
-      <div className="text-2xl mb-4">{status}</div>
-      {!error && (
-        <div className="w-16 h-16 border-t-4 border-blue-500 border-solid rounded-full animate-spin"></div>
-      )}
-      {error && (
-        <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-          {error}
-        </div>
-      )}
-      {warning && (
-        <div className="mt-4 p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
-          {warning.toString()}
-        </div>
-      )}
-    </div>
-  );
+      <div className="flex flex-col items-center justify-center min-h-screen p-5">
+        <Head>
+          <title>Authentication in progress...</title>
+        </Head>
+
+        <div className="text-2xl mb-4">{String(status)}</div>
+
+        {!error && !warning && (
+          <div className="w-16 h-16 border-t-4 border-blue-500 border-solid rounded-full animate-spin" />
+        )}
+
+        {error && (
+          <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+            {String(error)}
+          </div>
+        )}
+
+        {warning && (
+          <div className="mt-4 p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+            {String(warning)}
+          </div>
+        )}
+      </div>
+    );
+
 };
+
 
 // Main component with SSR safety
 const MicrosoftCallback = () => {
