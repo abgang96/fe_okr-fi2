@@ -131,180 +131,180 @@ const ClientCallback = () => {
 
   
   
-  //  useEffect(() => {
-  //   let isMounted = true;
+   useEffect(() => {
+    let isMounted = true;
 
-  //   const processRedirect = async () => {
-  //     try {
-  //       // If we've already processed this session, skip re-processing
-  //       if (sessionStorage.getItem('authProcessed') === 'true') {
-  //         console.log('Auth already processed, skipping...');
-  //         router.replace('/');
-  //         return;
-  //       }
-
-  //       // Parse error params from URL
-  //       const urlParams = new URLSearchParams(window.location.search);
-  //       const urlError = urlParams.get('error');
-  //       const urlErrorDescription = urlParams.get('error_description');
-
-  //       if (urlError) {
-  //         console.error('Auth error in URL:', urlError, urlErrorDescription);
-  //         if (isMounted) {
-  //           setStatus('Authentication failed');
-  //           setError(urlErrorDescription || urlError);
-  //         }
-
-  //         return setTimeout(() => {
-  //           if (isMounted) router.replace('/test-auth');
-  //         }, 1500);
-  //       }
-
-  //       // Dynamically import to avoid SSR crash
-  //       const { msalAuth } = await import('../../lib/msalAuth');
-
-  //       if (isMounted) setStatus('Completing Microsoft authentication...');
-
-  //       const result = await msalAuth.handleRedirectResponse();
-  //       console.log('Code processed:', result);
-
-  //       if (result.success == 1) {
-  //         if (isMounted) {
-  //           setStatus('Authentication successful! Redirecting...');
-  //           sessionStorage.setItem('authProcessed', 'true');
-  //           setRedirecting(true);
-  //           router.replace('/');
-  //         }
-  //       } else if (result.success == 0 && result.type === 'warning') {
-  //         if (isMounted) {
-  //           setStatus('Awaiting Authentication...');
-  //           setWarning(result.error || 'Please Have Patience!');
-  //         }
-  //         return setTimeout(() => {
-  //           if (isMounted) router.replace('/');
-  //         }, 1500);
-  //       } else if(result.success == -1) {
-  //         if (isMounted) {
-  //           setStatus('Authentication failed');
-  //           setError(result.error || 'Could not complete Microsoft sign-in');
-  //         }
-  //         return setTimeout(() => {
-  //           if (isMounted) router.replace('/test-auth');
-  //         }, 1500);
-  //       }
-  //     } catch (err) {
-  //       console.error('Redirect processing error:', err);
-  //       if (isMounted) {
-  //         setStatus('Authentication error');
-  //         setError(err?.message || 'Unexpected error occurred');
-  //       }
-  //       return setTimeout(() => {
-  //         if (isMounted) router.replace('/test-auth');
-  //       }, 1500);
-  //     }
-  //   };
-
-  //   processRedirect();
-
-  //   return () => {
-  //     isMounted = false;
-  //   };
-  //  }, [router]);
-  
-  
-  useEffect(() => {
-  let isMounted = true;
-
-  const waitForRedirectCode = () => {
-    const params = new URLSearchParams(window.location.search);
-    const hasCodeOrError =
-      params.has('code') || params.has('error') || params.has('error_description');
-    return hasCodeOrError;
-  };
-
-  const processRedirect = async () => {
-    try {
-      // Avoid re-processing on refresh
-      if (sessionStorage.getItem('authProcessed') === 'true') {
-        console.log('Auth already processed, skipping...');
-        router.replace('/');
-        return;
-      }
-
-      // Wait until code or error appears in URL
-      let retryCount = 0;
-      while (!waitForRedirectCode() && retryCount < 10) {
-        await new Promise((res) => setTimeout(res, 500));
-        retryCount++;
-      }
-
-      // Check error in URL
-      const params = new URLSearchParams(window.location.search);
-      const urlError = params.get('error');
-      const urlErrorDescription = params.get('error_description');
-
-      if (urlError) {
-        console.error('Auth error in URL:', urlError, urlErrorDescription);
-        if (isMounted) {
-          setStatus('Authentication failed');
-          setError(String(urlErrorDescription) || String(urlError));
-        }
-        return setTimeout(() => {
-          if (isMounted) router.replace('/test-auth');
-        }, 1500);
-      }
-
-      // Dynamically import MSAL auth handler
-      const { msalAuth } = await import('../../lib/msalAuth');
-
-      if (isMounted) setStatus('Completing Microsoft authentication...');
-
-      const result = await msalAuth.handleRedirectResponse();
-
-      console.log('Code processed:', result);
-
-      if (result.success === 1) {
-        if (isMounted) {
-          setStatus('Authentication successful! Redirecting...');
-          sessionStorage.setItem('authProcessed', 'true');
-          setRedirecting(true);
+    const processRedirect = async () => {
+      try {
+        // If we've already processed this session, skip re-processing
+        if (sessionStorage.getItem('authProcessed') === 'true') {
+          console.log('Auth already processed, skipping...');
           router.replace('/');
+          return;
         }
-      } else if (result.success === 0 && result.type === 'warning') {
-        if (isMounted) {
-          setStatus('Awaiting Authentication...');
-          setWarning(result.error || 'Please have patience...');
+
+        // Parse error params from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlError = urlParams.get('error');
+        const urlErrorDescription = urlParams.get('error_description');
+
+        if (urlError) {
+          console.error('Auth error in URL:', urlError, urlErrorDescription);
+          if (isMounted) {
+            setStatus('Authentication failed');
+            setError(urlErrorDescription || urlError);
+          }
+
+          return setTimeout(() => {
+            if (isMounted) router.replace('/test-auth');
+          }, 1500);
         }
-        return setTimeout(() => {
-          if (isMounted) router.replace('/');
-        }, 1500);
-      } else if (result.success === -1) {
+
+        // Dynamically import to avoid SSR crash
+        const { msalAuth } = await import('../../lib/msalAuth');
+
+        if (isMounted) setStatus('Completing Microsoft authentication...');
+
+        const result = await msalAuth.handleRedirectResponse();
+        console.log('Code processed:', result);
+
+        if (result.success == 1) {
+          if (isMounted) {
+            setStatus('Authentication successful! Redirecting...');
+            sessionStorage.setItem('authProcessed', 'true');
+            setRedirecting(true);
+            router.replace('/');
+          }
+        } else if (result.success == 0 && result.type === 'warning') {
+          if (isMounted) {
+            setStatus('Awaiting Authentication...');
+            setWarning(result.error || 'Please Have Patience!');
+          }
+          return setTimeout(() => {
+            if (isMounted) router.replace('/');
+          }, 1500);
+        } else if(result.success == -1) {
+          if (isMounted) {
+            setStatus('Authentication failed');
+            setError(result.error || 'Could not complete Microsoft sign-in');
+          }
+          return setTimeout(() => {
+            if (isMounted) router.replace('/test-auth');
+          }, 1500);
+        }
+      } catch (err) {
+        console.error('Redirect processing error:', err);
         if (isMounted) {
-          setStatus('Authentication failed');
-          setError(result.error || 'Could not complete Microsoft sign-in');
+          setStatus('Authentication error');
+          setError(err?.message || 'Unexpected error occurred');
         }
         return setTimeout(() => {
           if (isMounted) router.replace('/test-auth');
         }, 1500);
       }
-    } catch (err) {
-      console.error('Redirect processing error:', err);
-      if (isMounted) {
-        setStatus('Authentication error');
-        setError(err?.message || 'Unexpected error occurred');
-      }
-      return setTimeout(() => {
-        if (isMounted) router.replace('/test-auth');
-      }, 1500);
-    }
-  };
+    };
 
-  processRedirect();
+    processRedirect();
 
-  return () => {
-    isMounted = false;
-  };
-}, [router]);
+    return () => {
+      isMounted = false;
+    };
+   }, [router]);
+  
+  
+//   useEffect(() => {
+//   let isMounted = true;
+
+//   const waitForRedirectCode = () => {
+//     const params = new URLSearchParams(window.location.search);
+//     const hasCodeOrError =
+//       params.has('code') || params.has('error') || params.has('error_description');
+//     return hasCodeOrError;
+//   };
+
+//   const processRedirect = async () => {
+//     try {
+//       // Avoid re-processing on refresh
+//       if (sessionStorage.getItem('authProcessed') === 'true') {
+//         console.log('Auth already processed, skipping...');
+//         router.replace('/');
+//         return;
+//       }
+
+//       // Wait until code or error appears in URL
+//       let retryCount = 0;
+//       while (!waitForRedirectCode() && retryCount < 10) {
+//         await new Promise((res) => setTimeout(res, 500));
+//         retryCount++;
+//       }
+
+//       // Check error in URL
+//       const params = new URLSearchParams(window.location.search);
+//       const urlError = params.get('error');
+//       const urlErrorDescription = params.get('error_description');
+
+//       if (urlError) {
+//         console.error('Auth error in URL:', urlError, urlErrorDescription);
+//         if (isMounted) {
+//           setStatus('Authentication failed');
+//           setError(String(urlErrorDescription) || String(urlError));
+//         }
+//         return setTimeout(() => {
+//           if (isMounted) router.replace('/test-auth');
+//         }, 1500);
+//       }
+
+//       // Dynamically import MSAL auth handler
+//       const { msalAuth } = await import('../../lib/msalAuth');
+
+//       if (isMounted) setStatus('Completing Microsoft authentication...');
+
+//       const result = await msalAuth.handleRedirectResponse();
+
+//       console.log('Code processed:', result);
+
+//       if (result.success === 1) {
+//         if (isMounted) {
+//           setStatus('Authentication successful! Redirecting...');
+//           sessionStorage.setItem('authProcessed', 'true');
+//           setRedirecting(true);
+//           router.replace('/');
+//         }
+//       } else if (result.success === 0 && result.type === 'warning') {
+//         if (isMounted) {
+//           setStatus('Awaiting Authentication...');
+//           setWarning(result.error || 'Please have patience...');
+//         }
+//         return setTimeout(() => {
+//           if (isMounted) router.replace('/');
+//         }, 1500);
+//       } else if (result.success === -1) {
+//         if (isMounted) {
+//           setStatus('Authentication failed');
+//           setError(result.error || 'Could not complete Microsoft sign-in');
+//         }
+//         return setTimeout(() => {
+//           if (isMounted) router.replace('/test-auth');
+//         }, 1500);
+//       }
+//     } catch (err) {
+//       console.error('Redirect processing error:', err);
+//       if (isMounted) {
+//         setStatus('Authentication error');
+//         setError(err?.message || 'Unexpected error occurred');
+//       }
+//       return setTimeout(() => {
+//         if (isMounted) router.replace('/test-auth');
+//       }, 1500);
+//     }
+//   };
+
+//   processRedirect();
+
+//   return () => {
+//     isMounted = false;
+//   };
+// }, [router]);
 
   
   
