@@ -1,48 +1,42 @@
 {
   "components\\auth\\AuthProvider.js -> ../../lib/msalAuth": {
-    "id": 9298,
+    "id": "components\\auth\\AuthProvider.js -> ../../lib/msalAuth",
     "files": [
-      "static/chunks/745-eb002bb1fe4abeb5.js",
-      "static/chunks/298.5b5f707b794595d4.js"
+      "static/chunks/lib_msalAuth_js.js"
     ]
   },
   "components\\auth\\TeamsAuthHandler.js -> @microsoft/teams-js": {
-    "id": 3325,
+    "id": "components\\auth\\TeamsAuthHandler.js -> @microsoft/teams-js",
     "files": [
-      "static/chunks/609-dc5049448d55d673.js",
-      "static/chunks/325.7e59ace495bc71f2.js"
+      "static/chunks/node_modules_microsoft_teams-js_dist_esm_packages_teams-js_src_index_js.js"
     ]
   },
   "lib\\apiAuthConfig.js -> ./msalAuth": {
-    "id": 9298,
+    "id": "lib\\apiAuthConfig.js -> ./msalAuth",
     "files": [
-      "static/chunks/745-eb002bb1fe4abeb5.js",
-      "static/chunks/298.5b5f707b794595d4.js"
+      "static/chunks/lib_msalAuth_js.js"
     ]
   },
   "node_modules\\@azure\\msal-browser\\dist\\telemetry\\BrowserPerformanceClient.mjs -> ./BrowserPerformanceMeasurement.mjs": {
-    "id": null,
+    "id": "node_modules\\@azure\\msal-browser\\dist\\telemetry\\BrowserPerformanceClient.mjs -> ./BrowserPerformanceMeasurement.mjs",
     "files": []
   },
   "pages\\_app.js -> ../lib/msalAuth": {
-    "id": 9298,
+    "id": "pages\\_app.js -> ../lib/msalAuth",
     "files": [
-      "static/chunks/745-eb002bb1fe4abeb5.js",
-      "static/chunks/298.5b5f707b794595d4.js"
+      "static/chunks/lib_msalAuth_js.js"
     ]
   },
   "pages\\auth\\microsoft-callback.js -> ../../lib/msalAuth": {
-    "id": 9298,
+    "id": "pages\\auth\\microsoft-callback.js -> ../../lib/msalAuth",
     "files": [
-      "static/chunks/745-eb002bb1fe4abeb5.js",
-      "static/chunks/298.5b5f707b794595d4.js"
+      "static/chunks/lib_msalAuth_js.js"
     ]
   },
   "pages\\test-auth.js -> ../lib/msalAuth": {
-    "id": 9298,
+    "id": "pages\\test-auth.js -> ../lib/msalAuth",
     "files": [
-      "static/chunks/745-eb002bb1fe4abeb5.js",
-      "static/chunks/298.5b5f707b794595d4.js"
+      "static/chunks/lib_msalAuth_js.js"
     ]
   }
 }
