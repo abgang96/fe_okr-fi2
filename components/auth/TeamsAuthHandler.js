@@ -44,7 +44,7 @@ const ClientHandler = () => {
             // }
 
             teamsJs.authentication.authenticate({
-                url: `${window.location.origin}/auth/microsoft-start?inTeams=1`, // This page must trigger loginRedirect
+                url: `${window.location.origin}/auth/microsoft-callback`, // This page must trigger loginRedirect
                 width: 600,
                 height: 535,
                 successCallback: () => {

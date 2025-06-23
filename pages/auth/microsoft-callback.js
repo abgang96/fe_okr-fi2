@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import NoSSR from '../../components/auth/NoSSR';
 import Head from 'next/head';
 import { authentication } from "@microsoft/teams-js";
+import * as microsoftTeams from '@microsoft/teams-js';
 
 // Safe localStorage access with try-catch
 const safeLocalStorage = {
@@ -82,7 +83,10 @@ const ClientCallback = () => {
             setRedirecting(true);
             
             // Immediate redirect to home page (/) on successful authentication
-            microsoftTeams.authentication.notifySuccess();
+            const teams = await import('@microsoft/teams-js');
+            await teams.app.initialize();
+            teams.authentication.notifySuccess();
+
             router.replace('/');
           }
         } else if (result.type && result.type === 'warning') { 

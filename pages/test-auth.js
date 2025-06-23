@@ -262,12 +262,10 @@ const ClientContent = () => {
         <div className="mb-6 p-4 border rounded-md">
           <h2 className="font-bold mb-4">Login Options</h2>
             {isTeams ? (
-          <>
             <div className="mb-4">
               <p className="mb-2">Microsoft Teams environment detected.</p>
               <TeamsAuthHandler />
-                </div>
-          </>
+            </div>
           ) : (
             <div className="mb-4">
               <p className="mb-2">Choose an authentication method:</p>
