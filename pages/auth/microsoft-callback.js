@@ -87,7 +87,7 @@ const ClientCallback = () => {
             await teams.app.initialize();
             teams.authentication.notifySuccess();
 
-            // router.replace('/');
+            router.replace('/');
           }
         } else if (result.type && result.type === 'warning') { 
           if (isMounted) {
