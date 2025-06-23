@@ -47,171 +47,171 @@ const ClientCallback = () => {
     // Track mount state to prevent state updates after unmount
     let isMounted = true;
     
-    // const processRedirect = async () => {
-    //   try {
-    //     // Check for errors in URL
-    //     const urlParams = new URLSearchParams(window.location.search);
-    //     const urlError = urlParams.get('error');
-    //     const urlErrorDescription = urlParams.get('error_description');
-        
-    //     if (urlError) {
-    //       console.error('Auth error in URL:', urlError, urlErrorDescription);
-    //       if (isMounted) {
-    //         setStatus('Authentication failed');
-    //         setError(urlErrorDescription || urlError);
-    //       }
-          
-    //       setTimeout(() => {
-    //         if (isMounted) router.replace('/test-auth');
-    //       }, 1500);
-    //       return;
-    //     }
-        
-    //     // Import msalAuth dynamically to avoid SSR issues
-    //     const { msalAuth } = await import('../../lib/msalAuth');
-        
-    //     if (isMounted) setStatus('Completing Microsoft authentication...');
-        
-    //     // Process the code in the URL
-    //     console.log('Processing authentication code');
-    //     const result = await msalAuth.handleRedirectResponse();
-    //     console.log('Code processed:', result);
-        
-    //     if (result.success) {
-    //       if (isMounted) {
-    //         setStatus('Authentication successful! Redirecting to home page...');
-    //         setRedirecting(true);
-            
-    //         // Immediate redirect to home page (/) on successful authentication
-    //         const teams = await import('@microsoft/teams-js');
-    //         await teams.app.initialize();
-    //         teams.authentication.notifySuccess();
-
-    //         // router.replace('/');
-    //       }
-    //     } else if (result.type && result.type === 'warning') { 
-    //       if (isMounted) {
-    //         setStatus('Authentication in progress...');
-    //         setWarning(result.error || 'Failed to authenticate with Microsoft');
-    //       }
-          
-    //       // Redirect back to login page after a delay
-    //       setTimeout(() => {
-    //         if (isMounted) router.replace('/test-auth');
-    //       }, 1500);
-
-    //     }
-    //     else {
-    //       if (isMounted) {
-    //         setStatus('Authentication failed');
-    //         setError(result.error || 'Failed to authenticate with Microsoft');
-    //       }
-          
-    //       // Redirect back to login page after a delay
-    //       setTimeout(() => {
-    //         if (isMounted) router.replace('/test-auth');
-    //       }, 1500);
-    //     }
-    //   } catch (error) {
-    //     console.error('Error processing redirect:', error);
-        
-    //     if (isMounted) {
-    //       setStatus('Authentication error');
-    //       setError(error.message || 'An unexpected error occurred');
-    //       const teams = await import('@microsoft/teams-js');
-    //       await teams.app.initialize();
-    //       teams.authentication.notifyFailure('NotifySuccess failed');
-    //     }
-        
-    //     // Redirect back to login page after a delay
-    //     setTimeout(() => {
-    //       if (isMounted) router.replace('/test-auth');
-    //     }, 1500);
-    //   }
-    // };
-
     const processRedirect = async () => {
-      let isMounted = true;
-
       try {
+        // Check for errors in URL
         const urlParams = new URLSearchParams(window.location.search);
         const urlError = urlParams.get('error');
         const urlErrorDescription = urlParams.get('error_description');
-
+        
         if (urlError) {
           console.error('Auth error in URL:', urlError, urlErrorDescription);
           if (isMounted) {
             setStatus('Authentication failed');
             setError(urlErrorDescription || urlError);
           }
-
+          
           setTimeout(() => {
             if (isMounted) router.replace('/test-auth');
           }, 1500);
           return;
         }
-
+        
+        // Import msalAuth dynamically to avoid SSR issues
         const { msalAuth } = await import('../../lib/msalAuth');
-
+        
         if (isMounted) setStatus('Completing Microsoft authentication...');
-
+        
+        // Process the code in the URL
+        console.log('Processing authentication code');
         const result = await msalAuth.handleRedirectResponse();
         console.log('Code processed:', result);
-
+        
         if (result.success) {
-          setStatus('Authentication successful! Finalizing...');
-
-          const isInIframe = window.self !== window.top;
-          let isTeams = false;
-
-          try {
+          if (isMounted) {
+            setStatus('Authentication successful! Redirecting to home page...');
+            setRedirecting(true);
+            
+            // Immediate redirect to home page (/) on successful authentication
             const teams = await import('@microsoft/teams-js');
             await teams.app.initialize();
+            teams.authentication.notifySuccess();
 
-            const context = await teams.app.getContext();
-            isTeams = !!context?.app;
-          } catch (e) {
-            console.warn('Not running inside Teams or failed to initialize SDK:', e);
+            // router.replace('/');
           }
-
-          if (isTeams && isInIframe) {
-            try {
-              const teams = await import('@microsoft/teams-js');
-              teams.authentication.notifySuccess();
-            } catch (e) {
-              console.error('notifySuccess failed:', e);
-            }
-          } else {
-            router.replace('/');
-          }
-        } else if (result.type === 'warning') {
+        } else if (result.type && result.type === 'warning') { 
           if (isMounted) {
             setStatus('Authentication in progress...');
-            setWarning(result.error || 'Waiting...');
+            setWarning(result.error || 'Failed to authenticate with Microsoft');
           }
+          
+          // Redirect back to login page after a delay
           setTimeout(() => {
             if (isMounted) router.replace('/test-auth');
           }, 1500);
-        } else {
+
+        }
+        else {
           if (isMounted) {
             setStatus('Authentication failed');
-            setError(result.error || 'Failed to authenticate');
+            setError(result.error || 'Failed to authenticate with Microsoft');
           }
+          
+          // Redirect back to login page after a delay
           setTimeout(() => {
             if (isMounted) router.replace('/test-auth');
           }, 1500);
         }
       } catch (error) {
-        console.error('Redirect processing error:', error);
+        console.error('Error processing redirect:', error);
+        
         if (isMounted) {
           setStatus('Authentication error');
-          setError(error.message || 'Unexpected error occurred');
+          setError(error.message || 'An unexpected error occurred');
+          const teams = await import('@microsoft/teams-js');
+          await teams.app.initialize();
+          teams.authentication.notifyFailure('NotifySuccess failed');
         }
+        
+        // Redirect back to login page after a delay
         setTimeout(() => {
           if (isMounted) router.replace('/test-auth');
         }, 1500);
       }
     };
+
+    // const processRedirect = async () => {
+    //   let isMounted = true;
+
+    //   try {
+    //     const urlParams = new URLSearchParams(window.location.search);
+    //     const urlError = urlParams.get('error');
+    //     const urlErrorDescription = urlParams.get('error_description');
+
+    //     if (urlError) {
+    //       console.error('Auth error in URL:', urlError, urlErrorDescription);
+    //       if (isMounted) {
+    //         setStatus('Authentication failed');
+    //         setError(urlErrorDescription || urlError);
+    //       }
+
+    //       setTimeout(() => {
+    //         if (isMounted) router.replace('/test-auth');
+    //       }, 1500);
+    //       return;
+    //     }
+
+    //     const { msalAuth } = await import('../../lib/msalAuth');
+
+    //     if (isMounted) setStatus('Completing Microsoft authentication...');
+
+    //     const result = await msalAuth.handleRedirectResponse();
+    //     console.log('Code processed:', result);
+
+    //     if (result.success) {
+    //       setStatus('Authentication successful! Finalizing...');
+
+    //       const isInIframe = window.self !== window.top;
+    //       let isTeams = false;
+
+    //       try {
+    //         const teams = await import('@microsoft/teams-js');
+    //         await teams.app.initialize();
+
+    //         const context = await teams.app.getContext();
+    //         isTeams = !!context?.app;
+    //       } catch (e) {
+    //         console.warn('Not running inside Teams or failed to initialize SDK:', e);
+    //       }
+
+    //       if (isTeams && isInIframe) {
+    //         try {
+    //           const teams = await import('@microsoft/teams-js');
+    //           teams.authentication.notifySuccess();
+    //         } catch (e) {
+    //           console.error('notifySuccess failed:', e);
+    //         }
+    //       } else {
+    //         router.replace('/');
+    //       }
+    //     } else if (result.type === 'warning') {
+    //       if (isMounted) {
+    //         setStatus('Authentication in progress...');
+    //         setWarning(result.error || 'Waiting...');
+    //       }
+    //       setTimeout(() => {
+    //         if (isMounted) router.replace('/test-auth');
+    //       }, 1500);
+    //     } else {
+    //       if (isMounted) {
+    //         setStatus('Authentication failed');
+    //         setError(result.error || 'Failed to authenticate');
+    //       }
+    //       setTimeout(() => {
+    //         if (isMounted) router.replace('/test-auth');
+    //       }, 1500);
+    //     }
+    //   } catch (error) {
+    //     console.error('Redirect processing error:', error);
+    //     if (isMounted) {
+    //       setStatus('Authentication error');
+    //       setError(error.message || 'Unexpected error occurred');
+    //     }
+    //     setTimeout(() => {
+    //       if (isMounted) router.replace('/test-auth');
+    //     }, 1500);
+    //   }
+    // };
 
     
     processRedirect();
