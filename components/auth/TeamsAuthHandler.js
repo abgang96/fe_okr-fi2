@@ -35,13 +35,27 @@ const ClientHandler = () => {
             console.log('Teams context:', context);
             
             // Attempt Teams SSO authentication through MSAL
-            const result = await auth.login();
+            // const result = await auth.login();
             
-            if (result?.success) {
-              setStatus('Teams authentication successful');
-            } else {
-              setError(`Authentication failed: ${result?.error || 'Unknown error'}`);
-            }
+            // if (result?.success) {
+            //   setStatus('Teams authentication successful');
+            // } else {
+            //   setError(`Authentication failed: ${result?.error || 'Unknown error'}`);
+            // }
+
+            teamsJs.authentication.authenticate({
+                url: `${window.location.origin}/auth/microsoft-start?inTeams=1`, // This page must trigger loginRedirect
+                width: 600,
+                height: 535,
+                successCallback: () => {
+                  setStatus('Authentication successful via Teams popup');
+                  window.location.reload(); // Optional
+                },
+                failureCallback: (reason) => {
+                  console.error('Teams popup login failed:', reason);
+                  setError(`Authentication failed: ${reason}`);
+                }
+              });
           } catch (authError) {
             console.error('Teams auth error:', authError);
             setError(`Teams authentication error: ${authError.message}`);
