@@ -5,6 +5,8 @@
 .okr-node.business-unit-filtered > div,
 div.business-unit-filtered {
   background-color: #8fadd9 !important;
+  box-shadow: 0 0 0 2px #5a87c5 !important;
+  border: 2px solid #5a87c5 !important;
 }
 
 /* Ensure Assigned To filtered nodes get proper highlighting */
@@ -12,10 +14,18 @@ div.business-unit-filtered {
 .okr-node.assigned-to-filtered > div,
 div.assigned-to-filtered {
   background-color: #d179ba !important;
+  box-shadow: 0 0 0 2px #b04a86 !important;
+  border: 2px solid #b04a86 !important;
 }
 
 /* Ensure filter colors have proper z-index */
 .business-unit-filtered,
 .assigned-to-filtered {
   z-index: 5 !important;
+  transform: scale(1.02);
+}
+
+/* Ensure tree node transitions are smooth */
+.okr-node {
+  transition: all 0.3s ease-in-out !important;
 }

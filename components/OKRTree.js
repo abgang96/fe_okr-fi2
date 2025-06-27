@@ -12,7 +12,7 @@ const nodeTypes = {
 };
 
 // Enhanced tree layout algorithm that prevents node collisions
-const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMembers = [], filterOptions = {}) => {
+const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMembers = [], filterOptions = {}, expandedNodes = {}) => {
   console.log('Building tree with OKRs:', okrsList);
   if (!okrsList || okrsList.length === 0) {
     console.log('No OKRs provided, returning empty tree');
@@ -90,46 +90,99 @@ const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMember
     
     // Calculate node center X position
     const nodeX = startX + (subtreeWidth / 2) - (nodeWidth / 2);
-    const nodeY = level * (screenWidth < 640 ? verticalSpacing * 0.9 : verticalSpacing);
-      // Create node
+    
+    // Calculate additional Y offset based on expanded nodes above this one
+    let additionalYOffset = 0;
+    
+    // Nodes with the same path from the root need to be shifted down
+    // when an expanded node is above them in the same path
+    if (level > 0 && nodes.length > 0) {
+      // For each previously positioned node in the tree
+      for (const node of nodes) {
+        // Only consider nodes that might affect the current node's position:
+        // - They must be above this level (lower level number)
+        // - They must be in the same path as the current node
+        // - They must be expanded
+        if (node.data.level < level && expandedNodes[node.id]) {
+          // Find if this node is in the path from root to our current node
+          // by checking if it's one of this node's ancestors
+          let parentId = parentX;
+          let isAncestor = false;
+          
+          // Traverse up the tree to find if this expanded node is an ancestor
+          while (parentId) {
+            if (parentId === node.id) {
+              isAncestor = true;
+              break;
+            }
+            
+            // Find the parent of this node
+            const parentNode = nodes.find(n => n.id === parentId);
+            parentId = parentNode ? parentNode.data.parentNodeId : null;
+          }
+          
+          // If this expanded node is an ancestor, add its expansion offset to our node
+          if (isAncestor) {
+            additionalYOffset += expandedNodes[node.id];
+          }
+        }
+      }
+    }
+    
+    // Add additional offsets for all expanded nodes at levels above
+    // This affects all nodes at the same level regardless of path
+    if (level > 0) {
+      // For each level, check if there are expanded nodes that need extra space
+      for (let l = 0; l < level; l++) {
+        // Look for expanded nodes at this level that would affect nodes below
+        Object.keys(expandedNodes).forEach(expandedNodeId => {
+          const expandedNode = nodes.find(n => n.id === expandedNodeId);
+          if (expandedNode && parseInt(expandedNode.data.level) === l) {
+            // Add extra space for expanded nodes (depends on how much extra height an expanded node needs)
+            additionalYOffset += expandedNodes[expandedNodeId] ? expandedNodes[expandedNodeId] : 0;
+          }
+        });
+      }
+    }
+    
+    // Base vertical position + additional offset for expanded nodes above
+    const nodeY = level * (screenWidth < 640 ? verticalSpacing * 0.9 : verticalSpacing) + additionalYOffset;
+    
+    // Create node
     const currentNodeId = `${nodeId}`;
     const okr = okrMap[okrId];
-      // Check if current user is assigned to this OKR
+    
+    // Include level information in node data for vertical positioning calculations
+    if (!okr.level) {
+      okr.level = level;
+    }
+    
+    // Check if current user is assigned to this OKR
     let isAssignedToCurrentUser = false;
     if (currentUser && currentUser.teams_id && okr.assigned_users_details) {
       isAssignedToCurrentUser = okr.assigned_users_details.some(
         user => user.user_id === currentUser.teams_id
       );
-      // console.log(`OKR ${okr.okr_id} - ${okr.name} - Is assigned to current user: ${isAssignedToCurrentUser}`);
     }
-      // Check if the OKR matches any filter criteria
+    
+    // Check if the OKR matches any filter criteria
     let matchesBusinessUnitFilter = false;
     let matchesAssignedToFilter = false;    
     
     // Business unit filter - explicitly set to true when it matches
     if (filterOptions.businessUnit) {
-      console.log(`Checking Business Unit filter for OKR ${okr.okr_id} - ${okr.name}`);
-      console.log(`Selected business unit: ${filterOptions.businessUnit}`);
-      // console.log(`OKR data:`, okr);
-      
       // Handle array of business units
       if (okr.business_units && okr.business_units.length > 0) {
-        console.log(`OKR has ${okr.business_units.length} business units:`, okr.business_units);
         matchesBusinessUnitFilter = okr.business_units.some(
           bu => {
             // Check all possible property names for business unit ID
             const buId = bu.id || bu.business_unit_id || bu;
-            const matches = buId && buId.toString() === filterOptions.businessUnit.toString();
-            if (matches) {
-              console.log(`Match found for OKR ${okr.okr_id} with business unit: ${buId}`);
-            }
-            return matches;
+            return buId && buId.toString() === filterOptions.businessUnit.toString();
           }
         );
       } 
       // Handle direct business unit ID on OKR
       else if (okr.business_unit_id && okr.business_unit_id.toString() === filterOptions.businessUnit.toString()) {
-        console.log(`Direct match found for OKR ${okr.okr_id} with business_unit_id: ${okr.business_unit_id}`);
         matchesBusinessUnitFilter = true;
       }
       // Handle business unit object directly on OKR
@@ -137,44 +190,42 @@ const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMember
         (okr.business_unit.id && okr.business_unit.id.toString() === filterOptions.businessUnit.toString()) ||
         (okr.business_unit.business_unit_id && okr.business_unit.business_unit_id.toString() === filterOptions.businessUnit.toString())
       )) {
-        console.log(`Match found via business_unit object for OKR ${okr.okr_id}`);
         matchesBusinessUnitFilter = true;
       }
-      
-      console.log(`OKR ${okr.okr_id} matches business unit filter: ${matchesBusinessUnitFilter}`);
     }
     
     // Assigned To filter
-    if (filterOptions.assignedTo && okr.assigned_users_details && okr.assigned_users_details.length > 0) {
-      matchesAssignedToFilter = okr.assigned_users_details.some(
-        user => user.user_id === filterOptions.assignedTo
-      );
+    if (filterOptions.assignedTo) {
+      if (okr.assigned_users_details && okr.assigned_users_details.length > 0) {
+        matchesAssignedToFilter = okr.assigned_users_details.some(
+          user => {
+            const userId = user.user_id || user.id || user;
+            return userId && userId.toString() === filterOptions.assignedTo.toString();
+          }
+        );
+      }
     }
-      
+
+    // Create the node with data including expanded status and filter matches
     nodes.push({
       id: currentNodeId,
       type: 'okrNode',
       position: { x: nodeX, y: nodeY },
-      className: matchesBusinessUnitFilter ? 'bg-blue-100' : '',
-      style: matchesBusinessUnitFilter ? { backgroundColor: '#dbeafe' } : {},
       data: {
         ...okr,
         level,
-        isLeafNode: children.length === 0,
-        users,
-        currentUser,
+        parentNodeId: parentX,
+        key: currentNodeId,
         teamMembers,
-        isAssignedToCurrentUser,
+        currentUser,
+        users, // Pass all users for permission checks
         matchesBusinessUnitFilter,
         matchesAssignedToFilter,
-        onAddSubObjective: (okrData) => {
-          if (typeof window !== 'undefined' && window.__okrTreeAddSubObjective) {
-            window.__okrTreeAddSubObjective(okrData);
-          }
-        }
-      }
+        isAssignedToCurrentUser
+      },
+      draggable: false, // Disable dragging for tree integrity
     });
-    
+
     nodeIdMap[okrId] = currentNodeId;
     nodeId++;
     
@@ -243,6 +294,8 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
   const [selectedRootOkr, setSelectedRootOkr] = useState('all');
   // ReactFlow zoom control
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
+  // Track expanded nodes to adjust layout
+  const [expandedNodes, setExpandedNodes] = useState({});
   
   // User, department, and business unit states  
   const [users, setUsers] = useState([]);
@@ -272,7 +325,9 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
   // Search functionality for Assigned To dropdown
   const [assignedToSearch, setAssignedToSearch] = useState('');
   const [filteredUsers, setFilteredUsers] = useState([]);
-  const [showAssignedToDropdown, setShowAssignedToDropdown] = useState(false);  // Fetch users, departments, and business units once when component mounts
+  const [showAssignedToDropdown, setShowAssignedToDropdown] = useState(false);  
+  
+  // Fetch users, departments, and business units once when component mounts  
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -285,14 +340,17 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
           try {
             // Get fresh access rights from API
             const accessData = await api.getCurrentUserAccess();
-            console.log('Fetched user access data:', accessData);
             
             // Only allow access if add_objective_access is explicitly true
-            setHasAddObjectiveAccess(accessData?.add_objective_access === true);
-            console.log('Set add objective access to:', accessData?.add_objective_access === true);
+            const hasAccess = accessData?.add_objective_access === true;
+            setHasAddObjectiveAccess(hasAccess);
             
-            // Update local storage with new access data
-            localStorage.setItem('userAccess', JSON.stringify(accessData));
+            // Update local storage with new access data - make sure to store as boolean
+            const storedAccessData = {
+              admin_master_access: accessData?.admin_master_access === true,
+              add_objective_access: hasAccess
+            };
+            localStorage.setItem('userAccess', JSON.stringify(storedAccessData));
           } catch (accessError) {
             console.error('Error checking add objective access:', accessError);
             
@@ -301,8 +359,8 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
               const accessStr = localStorage.getItem('userAccess');
               if (accessStr) {
                 const cachedAccessData = JSON.parse(accessStr);
-                console.log('Using cached access data:', cachedAccessData);
-                setHasAddObjectiveAccess(cachedAccessData?.add_objective_access === true);
+                const hasAccess = cachedAccessData?.add_objective_access === true;
+                setHasAddObjectiveAccess(hasAccess);
               } else {
                 setHasAddObjectiveAccess(false);
               }
@@ -368,6 +426,24 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
     fetchInitialData();
   }, []);
 
+  // This effect ensures permissions are properly read from localStorage on component mount
+  // This is needed because the API permission check might fail or race conditions might occur
+  useEffect(() => {
+    try {
+      const accessStr = localStorage.getItem('userAccess');
+      if (accessStr) {
+        const parsedAccess = JSON.parse(accessStr);
+        
+        // Force set the permission regardless of previous state
+        if (parsedAccess.add_objective_access === true) {
+          setHasAddObjectiveAccess(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error reading permissions from localStorage:', error);
+    }
+  }, []); // Empty dependency array ensures this runs only on mount
+
   // Memoize fetchOKRs function
   const fetchOKRs = useCallback(async () => {
     console.log('Starting to fetch OKRs...');
@@ -400,11 +476,12 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
       const roots = data.filter(okr => !okr.parent_okr);
       console.log('Root OKRs:', {
         count: roots.length,
-        sample: roots[0]
+        sample: roots[0],
+        rootIds: roots.map(r => r.okr_id)
       });
       
       setAllOkrs(data);
-      setRootOkrs(roots);
+      setRootOkrs(roots); // Make sure this is always called before setOkrsList
       setOkrsList(data);
       setIsLoading(false);
     } catch (error) {
@@ -494,7 +571,8 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
         children: okrsList[0].child_okrs
       });
 
-      const { nodes: treeNodes, edges: treeEdges } = buildTreeStructure(okrsList, users, currentUser, teamMembers, filterOptions);
+      // Pass expandedNodes to the buildTreeStructure function
+      const { nodes: treeNodes, edges: treeEdges } = buildTreeStructure(okrsList, users, currentUser, teamMembers, filterOptions, expandedNodes);
       console.log('Tree structure built:', {
         nodes: treeNodes.length,
         edges: treeEdges.length,
@@ -516,7 +594,7 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
     } else {
       console.log('No OKRs available to build tree');
     }
-  }, [okrsList, users, currentUser, teamMembers, setNodes, setEdges, handleContinueIteration, filterOptions]);
+  }, [okrsList, users, currentUser, teamMembers, setNodes, setEdges, handleContinueIteration, filterOptions, expandedNodes]);
 
   // Filter users based on search input
   useEffect(() => {
@@ -560,16 +638,54 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
     console.log('Selected Business Unit:', selectedBusinessUnit);
     
     setFilterOptions(newFilterOptions);
-    setAreFiltersApplied(true);
+    
+    // Force rebuild of tree with new filters
+    if (okrsList.length > 0) {
+      setAreFiltersApplied(true);
+      
+      // Small delay to ensure state updates before rebuilding
+      setTimeout(() => {
+        const { nodes: newNodes, edges: newEdges } = buildTreeStructure(
+          okrsList, 
+          users, 
+          currentUser,
+          teamMembers,
+          newFilterOptions,
+          expandedNodes
+        );
+        
+        setNodes(newNodes);
+        setEdges(newEdges);
+      }, 10);
+    }
   };
     // Reset all filters
   const resetFilters = () => {
     setSelectedBusinessUnit('');
     setSelectedAssignedTo('');
+    setAreFiltersApplied(false);
     setFilterOptions({
       businessUnit: null,
       assignedTo: null
     });
+    
+    // Rebuild the tree without filters
+    if (okrsList.length > 0) {
+      // Small delay to ensure state updates before rebuilding
+      setTimeout(() => {
+        const { nodes: newNodes, edges: newEdges } = buildTreeStructure(
+          okrsList, 
+          users, 
+          currentUser,
+          teamMembers,
+          { businessUnit: null, assignedTo: null },
+          expandedNodes
+        );
+        
+        setNodes(newNodes);
+        setEdges(newEdges);
+      }, 10);
+    }
     setAreFiltersApplied(false);
     setAssignedToSearch('');
     setFilteredUsers(users);
@@ -642,6 +758,29 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
     return () => {
       if (typeof window !== 'undefined') {
         window.__okrTreeAddSubObjective = undefined;
+      }
+    };
+  }, []);
+  
+  // Add effect to handle node expansions
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Define global handler for node expansion toggle
+      window.__okrTreeToggleExpand = (nodeId, isExpanded, additionalHeight = 150) => {
+        console.log(`Node ${nodeId} expansion changed to ${isExpanded}, additional height: ${additionalHeight}px`);
+        
+        // Update expanded nodes state with the exact measured height for this node
+        setExpandedNodes(prev => ({
+          ...prev,
+          [nodeId]: isExpanded ? additionalHeight : 0 // Use measured height or 0 when collapsed
+        }));
+      };
+    }
+    
+    // Clean up the global handler when the component unmounts
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.__okrTreeToggleExpand = undefined;
       }
     };
   }, []);
@@ -801,7 +940,7 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
               <span className="inline-block w-3 h-3 mr-1" style={{ backgroundColor: '#d179ba', borderRadius: '50%' }}></span>
               Filter active
             </div>
-          )} */}
+          } */}
         </div>        {/* Filter Action Buttons */}
         <div className="flex items-center gap-2 ml-0 sm:ml-2 w-full sm:w-auto mt-2 sm:mt-0">
           <button 
@@ -828,7 +967,7 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
           <div className="hidden sm:block h-10 border-l border-gray-400 mx-3"></div>
         )}
         
-        {/* Add Root Objective Button - Only show if user has access */}
+        {/* Add Root Objective Button - Only visible when user has access */}
         {hasAddObjectiveAccess && (
           <button
             className="px-3 py-2 bg-[#F6490D] text-white rounded hover:bg-[#E03D00] transition-colors whitespace-nowrap text-sm sm:text-base w-full sm:w-auto mt-2 sm:mt-0"
@@ -841,6 +980,7 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
             <span className="sm:hidden">Add Root</span>
           </button>
         )}
+
       </div>
       
       {isLoading ? (
@@ -907,9 +1047,8 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg sm:text-xl font-semibold">
                 {selectedOKR 
-                  ? `Add Task for: ${selectedOKR.name}`
-                  : 'Add Task'
-                }
+                  ? `Add Task for: ${selectedOKR.name}` 
+                  : 'Add Task'}
               </h3>
               <button 
                 onClick={() => setShowAddTaskForm(false)} 

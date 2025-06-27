@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import api from '../../lib/api';
 import Link from 'next/link';
+import Header from '../../components/Header';
+import { useAuth } from '../../components/auth/AuthProvider';
 
-const UserMaster = ({ user }) => {
+const UserMaster = () => {
   const router = useRouter();
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -11,13 +13,25 @@ const UserMaster = ({ user }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   
   // Check if user has access to admin master
   useEffect(() => {
     const checkAccess = async () => {
+      // Wait for auth to finish loading
+      if (authLoading) return;
+      
+      // Check if authenticated
+      if (!isAuthenticated || !user) {
+        console.log('User not authenticated, redirecting to login...');
+        setIsLoading(false);
+        router.push('/test-auth');
+        return;
+      }
+      
       try {
         const accessData = await api.getCurrentUserAccess();
-        if (accessData && accessData.admin_master_access) {
+        if (accessData && accessData.admin_master_access === true) {
           setIsAuthorized(true);
           fetchUsers();
         } else {
@@ -100,14 +114,17 @@ const UserMaster = ({ user }) => {
   
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-center">
-          <div className="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-blue-600" role="status">
-            <span className="visually-hidden">Loading...</span>
+      <>
+        <Header user={user} />
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="text-center">
+            <div className="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-blue-600" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="mt-2">Loading...</p>
           </div>
-          <p className="mt-2">Loading...</p>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -116,7 +133,9 @@ const UserMaster = ({ user }) => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 pt-24">
+    <>
+      <Header user={user} />
+      <div className="container mx-auto px-4 py-8 pt-24">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-gray-800">User Master</h1>
         <Link 
@@ -234,6 +253,7 @@ const UserMaster = ({ user }) => {
         </div>
       )}
     </div>
+    </>
   );
 };
 

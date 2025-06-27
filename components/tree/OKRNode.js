@@ -1,4 +1,4 @@
-import { useState, memo, useEffect } from 'react';
+import React, { useState, memo, useEffect, useRef } from 'react';
 import { Handle, Position } from 'reactflow';
 import ProgressCircle from '../ui/ProgressCircle';
 import api from '../../lib/api';
@@ -321,39 +321,80 @@ const OKRNode = ({ data, isConnectable }) => {
   }, [assignedUsers, data]);
   */
   
+  // Reference to measure the expanded node height
+  const nodeRef = useRef(null);
+  
+  // Notify parent when expansion state changes
+  useEffect(() => {
+    if (data.onToggleExpand) {
+      if (isExpanded) {
+        // Wait for the expanded content to render before measuring height
+        setTimeout(() => {
+          const nodeElement = nodeRef.current;
+          if (nodeElement) {
+            // Calculate the extra height needed beyond the default node height
+            // Default node height is about 100px, so we subtract that from total height
+            const expandedHeight = nodeElement.getBoundingClientRect().height;
+            const additionalHeight = Math.max(0, expandedHeight - 100);
+            
+            // Call the parent's callback function with the expanded state and calculated height
+            data.onToggleExpand(isExpanded, additionalHeight);
+          } else {
+            // Fallback if element not available
+            data.onToggleExpand(isExpanded);
+          }
+        }, 50); // Short delay to ensure DOM is updated
+      } else {
+        // When collapsing, just notify without height
+        data.onToggleExpand(isExpanded);
+      }
+    }
+  }, [isExpanded, data.onToggleExpand]);
+
+  // Add a useEffect to log when filter matches change
+  useEffect(() => {
+    if (data.matchesBusinessUnitFilter || data.matchesAssignedToFilter) {
+      console.log(`OKR ${data.okr_id} (${data.name}) filter matches changed:`, {
+        businessUnit: data.matchesBusinessUnitFilter,
+        assignedTo: data.matchesAssignedToFilter
+      });
+    }
+  }, [data.matchesBusinessUnitFilter, data.matchesAssignedToFilter, data.okr_id, data.name]);
+
   return (
     <>
       <Handle
         type="target"
         position={Position.Top}
         isConnectable={isConnectable}
-      />      <div 
-        className={`okr-node ${typeof data.status === 'boolean' ? (data.status ? 'active' : 'inactive') : data.status?.toLowerCase()?.replace(' ', '-')} 
-          ${data.isSelected || data.isChildOfSelected ? 'border-2' : 'border'}
-          ${data.borderColor || 'border-gray-300'}
+      />      <div
+        ref={nodeRef}
+        className={`okr-node rounded shadow-md p-2 min-w-[200px] transition-all duration-300 
+          ${data.isAssignedToCurrentUser ? 'border-2 border-blue-500' : ''}
           ${data.matchesBusinessUnitFilter ? 'business-unit-filtered' : ''}
-          ${data.matchesAssignedToFilter ? 'assigned-to-filtered' : ''}`}        style={{
-          borderColor: data.isSelected || data.isChildOfSelected ? 
-            (data.borderColor ? data.borderColor.replace('border-', '').replace('-500', '') : 'blue') : 
-            'gray',
-          backgroundColor: data.matchesBusinessUnitFilter ? '#8fadd9 !important' : 
-                           data.matchesAssignedToFilter ? '#d179ba !important' : '',
-          zIndex: (data.matchesBusinessUnitFilter || data.matchesAssignedToFilter) ? 5 : 'auto'
+          ${data.matchesAssignedToFilter ? 'assigned-to-filtered' : ''}`}
+        style={{
+          width: '100%',
+          minHeight: '100px',
+          backgroundColor: data.matchesBusinessUnitFilter ? '#8fadd9' : 
+                           data.matchesAssignedToFilter ? '#d179ba' : '',
+          zIndex: (data.matchesBusinessUnitFilter || data.matchesAssignedToFilter) ? 5 : 'auto',
+          borderColor: data.isAssignedToCurrentUser ? '#3b82f6' : 'transparent'
         }}
-        onClick={() => {
-          // Debug log to verify filter status
-          console.log(`OKR node ${data.okr_id} - ${data.name} - Filter status:`, {
+      >
+        {/* Debug log to verify filter status */}
+        {(data.matchesBusinessUnitFilter || data.matchesAssignedToFilter) && console.log(`OKR node ${data.okr_id} - ${data.name} - Filter status:`, {
             matchesBusinessUnitFilter: data.matchesBusinessUnitFilter,
             matchesAssignedToFilter: data.matchesAssignedToFilter,
             backgroundColor: data.matchesBusinessUnitFilter ? '#8fadd9' : 
                              data.matchesAssignedToFilter ? '#d179ba' : 'white'
-          });
-        }}
-      >          <div 
+        })}
+        
+        <div 
           className={`cursor-pointer w-full h-full ${data.matchesBusinessUnitFilter ? '!bg-[#8fadd9]' : data.matchesAssignedToFilter ? '!bg-[#d179ba]' : ''}`}
           style={{
-            backgroundColor: data.matchesBusinessUnitFilter ? '#8fadd9 !important' : 
-                            data.matchesAssignedToFilter ? '#d179ba !important' : ''
+            backgroundColor: data.matchesBusinessUnitFilter ? '#8fadd9' : 
+                            data.matchesAssignedToFilter ? '#d179ba' : ''
           }}
           onClick={() => setIsExpanded(!isExpanded)}
         ><div className="flex justify-between items-center">
@@ -475,7 +516,8 @@ const OKRNode = ({ data, isConnectable }) => {
           onWheel={(e) => e.stopPropagation()}
         >
           <div 
-            className="bg-white p-4 sm:p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto" 
+            className="bg-white p-4 sm:p-6 rounded-lg max-h-[90vh] overflow-y-auto" 
+            style={{ width: "600px", minWidth: "600px" }}
             onClick={(e) => e.stopPropagation()}
             onWheel={(e) => e.stopPropagation()}
           >

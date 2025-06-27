@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { getTeamMemberForms, getTeamMetrics, getMyTeamMembers } from '../../lib/weeklyDiscussions';
 import Header from '../../components/Header';
+import { useAuth } from '../../components/auth/AuthProvider';
 
 export default function TeamDiscussions() {
   const [forms, setForms] = useState([]);
@@ -15,45 +17,25 @@ export default function TeamDiscussions() {
     completed_reviews: 0,
     pending_reviews: 0
   });
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [expandedMembers, setExpandedMembers] = useState({});
+  const router = useRouter();
 
-  const [user, setUser] = useState(null);
-  const [isClient, setIsClient] = useState(false);
+  // Get authentication from the AuthProvider
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
 
-  // Ensure this only runs on client
+  // Check authentication and redirect if not authenticated
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setIsClient(true);
+    const checkAuth = async () => {
+      // Wait for auth to complete loading
+      if (authLoading) return;
 
-      try {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
-      } catch (e) {
-        console.error('Error parsing user from localStorage:', e);
+      // If not authenticated, redirect to test-auth
+      if (!isAuthenticated) {
+        router.push('/test-auth');
+        return;
       }
-    }
-  }, []);
-  
-  // Check authentication on load
-  useEffect(() => {
-    let token;
-    if (typeof window !== 'undefined') {
-      token = localStorage?.getItem('accessToken') || localStorage?.getItem('auth_token');
-    }
-    setIsAuthenticated(!!token);
-    
-    if (!token) {
-      setError('You must be logged in to view team discussions.');
-      setLoading(false);
-    }
-  }, []);
-  useEffect(() => {
-    const fetchTeamData = async () => {
-      if (!isAuthenticated) return;
       
+      // Continue with data loading
       try {
         console.log('Starting to fetch team data...');
         setLoading(true);
@@ -63,7 +45,9 @@ export default function TeamDiscussions() {
         console.log('Fetching team metrics...');
         const metricsData = await getTeamMetrics();
         console.log('Team metrics received:', metricsData);
-        setMetrics(metricsData);        // Fetch all team members
+        setMetrics(metricsData);
+        
+        // Fetch all team members
         console.log('Fetching all team members...');
         let allTeamMembers = [];
         try {
@@ -80,9 +64,11 @@ export default function TeamDiscussions() {
         console.log('Fetching team member forms...');
         const formsData = await getTeamMemberForms();
         console.log('Team forms received:', formsData);
-          // Create a map to group forms by user
+        
+        // Create a map to group forms by user
         const groupedForms = {};
-          // If we have team members data, initialize the map with all team members
+        
+        // If we have team members data, initialize the map with all team members
         if (allTeamMembers.length > 0) {
           allTeamMembers.forEach(member => {
             groupedForms[member.id] = {
@@ -128,9 +114,9 @@ export default function TeamDiscussions() {
         setLoading(false);
       }
     };
-
-    fetchTeamData();
-  }, [isAuthenticated]);
+    
+    checkAuth();
+  }, [isAuthenticated, authLoading, router]);
   
   const getFormStatusBadge = (form) => {
     // For employee form status
@@ -170,6 +156,18 @@ export default function TeamDiscussions() {
     }));
   };
   
+  // Show loading state while auth is being checked
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4 mx-auto"></div>
+          <p>Loading authentication...</p>
+        </div>
+      </div>
+    );
+  }
+  
   if (loading) {
     return (      <div>
         <Head>
@@ -182,7 +180,7 @@ export default function TeamDiscussions() {
           hideWeeklyDiscussions={true}
         /> */}
       
-      {isClient && (
+      {user && (
         <Header 
           isAuthenticated={isAuthenticated} 
           user={user}
@@ -211,7 +209,7 @@ export default function TeamDiscussions() {
           isAuthenticated={isAuthenticated} 
           user={JSON.parse(localStorage?.getItem('user') || '{}')}
         /> */}
-        {isClient && (
+        {user && (
           <Header 
             isAuthenticated={isAuthenticated} 
             user={user}
@@ -259,7 +257,7 @@ export default function TeamDiscussions() {
         user={JSON.parse(localStorage?.getItem('user') || '{}')}
       /> */}
 
-      {isClient && (
+      {user && (
         <Header 
           isAuthenticated={isAuthenticated} 
           user={user}

@@ -1,1 +1,10 @@
-{"/admin-master/employee-questions":"pages/admin-master/employee-questions.html","/_app":"pages/_app.js","/api/auth/microsoft/login":"pages/api/auth/microsoft/login.js","/admin-master":"pages/admin-master.html","/api/auth/microsoft/token":"pages/api/auth/microsoft/token.js","/admin-master/manager-questions":"pages/admin-master/manager-questions.html","/auth/debug":"pages/auth/debug.html","/auth-start":"pages/auth-start.html","/auth-start_fixed":"pages/auth-start_fixed.html","/auth/error":"pages/auth/error.html","/_error":"pages/_error.js","/auth/microsoft-callback":"pages/auth/microsoft-callback.html","/":"pages/index.html","/auth/macos-fallback":"pages/auth/macos-fallback.html","/o3-discussions":"pages/o3-discussions.html","/config":"pages/config.html","/test-auth":"pages/test-auth.html","/admin-master/user-master":"pages/admin-master/user-master.html","/tasks":"pages/tasks.html","/weekly-discussions/[id]":"pages/weekly-discussions/[id].html","/team-discussions":"pages/team-discussions.html","/team-discussions/review/[id]":"pages/team-discussions/review/[id].html","/weekly-discussions":"pages/weekly-discussions.html","/_document":"pages/_document.js","/404":"pages/404.html"}
+{
+  "/_app": "pages/_app.js",
+  "/_error": "pages/_error.js",
+  "/_document": "pages/_document.js",
+  "/": "pages/index.js",
+  "/test-auth": "pages/test-auth.js",
+  "/api/auth/microsoft/login": "pages/api/auth/microsoft/login.js",
+  "/auth/microsoft-callback": "pages/auth/microsoft-callback.js",
+  "/api/auth/microsoft/token": "pages/api/auth/microsoft/token.js"
+}

@@ -216,7 +216,7 @@ const EditOKRForm = ({ okrData, users = [], departments = [], businessUnits = []
   );
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} style={{ width: "100%" }}>
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="title">
           Objective Title
@@ -228,6 +228,7 @@ const EditOKRForm = ({ okrData, users = [], departments = [], businessUnits = []
           onChange={(e) => setTitle(e.target.value)}
           className={`w-full px-3 py-2 border rounded-md ${errors.title ? 'border-red-500' : 'border-gray-300'}`}
           placeholder="Enter objective title"
+          style={{ width: "100%" }}
         />
         {errors.title && (
           <p className="mt-1 text-xs text-red-500">{errors.title}</p>
@@ -268,7 +269,7 @@ const EditOKRForm = ({ okrData, users = [], departments = [], businessUnits = []
         )}
       </div>
       
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-8" style={{ width: "100%" }}>
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="startDate">
             Start Date
@@ -302,7 +303,7 @@ const EditOKRForm = ({ okrData, users = [], departments = [], businessUnits = []
         </div>
       </div>
       
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-8" style={{ width: "100%" }}>
         <div className="mb-4 relative" ref={dropdownRef}>
           <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="users">
             Assigned To (Multiple)

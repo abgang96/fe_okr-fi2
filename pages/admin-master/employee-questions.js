@@ -3,8 +3,9 @@ import { useRouter } from 'next/router';
 import api from '../../lib/api';
 import Link from 'next/link';
 import Header from '../../components/Header';
+import { useAuth } from '../../components/auth/AuthProvider';
 
-const EmployeeQuestions = ({ user }) => {
+const EmployeeQuestions = () => {
   const router = useRouter();
   const [questions, setQuestions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -13,6 +14,7 @@ const EmployeeQuestions = ({ user }) => {
   const [editQuestion, setEditQuestion] = useState(null);
   const [options, setOptions] = useState([]);
   const [newOption, setNewOption] = useState('');
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   
   // Form state
   const [formData, setFormData] = useState({
@@ -23,10 +25,14 @@ const EmployeeQuestions = ({ user }) => {
     // Check if user has access to admin master
   useEffect(() => {
     const checkAccess = async () => {
-      if (!user) {
-        console.log('No user found, redirecting to home');
+      // Wait for auth to finish loading
+      if (authLoading) return;
+      
+      // Check if authenticated
+      if (!isAuthenticated || !user) {
+        console.log('User not authenticated, redirecting to login...');
         setIsLoading(false);
-        router.push('/');
+        router.push('/test-auth');
         return;
       }
       

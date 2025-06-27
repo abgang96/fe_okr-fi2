@@ -38,8 +38,14 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
   const debouncedSearch = debounce(async (query) => {
     setIsSearching(true);
     try {
-      const fetchedUsers = await api.getUsers(query);
-      setAvailableUsers(fetchedUsers);
+      if (query.length >= 1) {
+        // Make API call to get filtered users
+        const fetchedUsers = await api.getUsers(query);
+        setAvailableUsers(fetchedUsers);
+      } else {
+        // If query is empty, use the original users list
+        setAvailableUsers(users);
+      }
     } catch (error) {
       console.error('Error searching users:', error);
     } finally {
@@ -51,21 +57,28 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
   const handleSearchChange = (e) => {
     const query = e.target.value;
     setSearchQuery(query);
-    if (query.length >= 1) {
-      debouncedSearch(query);
-    }
+    // Always call search to handle the query (empty or not)
+    debouncedSearch(query);
   };
 
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
+      // Only close the dropdown if not clicking on the search input or inside the dropdown
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowDropdown(false);
+        // Add a slight delay to allow handling of click events inside the dropdown
+        setTimeout(() => {
+          setShowDropdown(false);
+          // Clear search query when closing dropdown
+          setSearchQuery('');
+        }, 100);
       }
+      
       if (businessUnitDropdownRef.current && !businessUnitDropdownRef.current.contains(event.target)) {
         setShowBusinessUnitDropdown(false);
       }
     }
+    
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -96,6 +109,11 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
       setDepartment(departments[0].id);
     }
   }, [departments, department]);
+
+  // Set initial available users list
+  useEffect(() => {
+    setAvailableUsers(users);
+  }, [users]);
 
   useEffect(() => {
     if (users.length > 0 && selectedUsers.length === 0) {
@@ -331,9 +349,19 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
                   type="text"
                   value={searchQuery}
                   onChange={handleSearchChange}
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Force dropdown to stay open
+                    setShowDropdown(true);
+                  }}
+                  onFocus={(e) => {
+                    e.stopPropagation();
+                    // Force dropdown to stay open on focus
+                    setShowDropdown(true);
+                  }}
                   className="w-full px-3 py-2 border rounded-md text-sm"
                   placeholder="Search users..."
+                  autoFocus
                 />
               </div>
 
@@ -345,7 +373,11 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
               )}
 
               {/* Users list */}
-              {!isSearching && availableUsers.length === 0 ? (
+              {isSearching ? (
+                <div className="px-4 py-2 text-sm text-gray-500">
+                  Searching...
+                </div>
+              ) : availableUsers.length === 0 ? (
                 <div className="px-4 py-2 text-sm text-gray-500">
                   No users found
                 </div>

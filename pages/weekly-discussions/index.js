@@ -4,113 +4,70 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { getMyWeeklyForms } from '../../lib/weeklyDiscussions'; 
 import Header from '../../components/Header';
+import { useAuth } from '../../components/auth/AuthProvider';
 
 export default function WeeklyDiscussions() {
   const [forms, setForms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeFilter, setActiveFilter] = useState('All'); // Add filter state
+  const [activeFilter, setActiveFilter] = useState('All'); // Define activeFilter state
   const router = useRouter();
+  
+  // Get authentication from the AuthProvider
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
 
-  const [user, setUser] = useState(null);
-  const [isClient, setIsClient] = useState(false);
-  
-  // Check authentication on load
-  // useEffect(() => {
-  //   let token;
-  //   if (typeof window !== 'undefined') {
-  //     token = localStorage?.getItem('accessToken') || localStorage?.getItem('auth_token');
-  //   }   
-  //   setIsAuthenticated(!!token);
-  //   if (!token) {
-  //     setError('You must be logged in to view weekly discussions.');
-  //     setLoading(false);
-  //   }
-  // }, []);  
-  
-  // useEffect(() => {
-  //   const fetchForms = async () => {
-  //     if (!isAuthenticated) return;
-  //     try {
-  //       setLoading(true);
-  //       console.log("Fetching weekly forms...");
-  //       const formsData = await getMyWeeklyForms();
-  //       console.log("Retrieved forms data:", formsData);
-  //       setForms(formsData);
-  //     } catch (err) {
-  //       console.error("Error details:", {
-  //         message: err.message,
-  //         response: err.response?.data,
-  //         status: err.response?.status
-  //       });
-  //       if (err.response?.status === 401) {
-  //         setError('Authentication error. Please login again.');
-  //       } else {
-  //         setError('Failed to load weekly discussions. Please try again later.');
-  //       }
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
-  //   fetchForms();
-  // }, [isAuthenticated]);
-  
+  // Check authentication and redirect if not authenticated
   useEffect(() => {
-  if (typeof window !== 'undefined') {
-    setIsClient(true);
+    const checkAuth = async () => {
+      // Wait for auth to complete loading
+      if (authLoading) return;
 
-    try {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+      // If not authenticated, redirect to test-auth
+      if (!isAuthenticated) {
+        router.push('/test-auth');
+        return;
       }
-    } catch (e) {
-      console.error('Error parsing user from localStorage:', e);
-    }
-  }
-}, []);
-
-useEffect(() => {
-  let token;
-  if (typeof window !== 'undefined') {
-    token = localStorage?.getItem('accessToken') || localStorage?.getItem('auth_token');
-  }
-  setIsAuthenticated(!!token);
-  if (!token) {
-    setError('You must be logged in to view weekly discussions.');
-    setLoading(false);
-  }
-}, []);
-
-useEffect(() => {
-  const fetchForms = async () => {
-    if (!isAuthenticated) return;
-    try {
-      setLoading(true);
-      console.log("Fetching weekly forms...");
-      const formsData = await getMyWeeklyForms();
-      console.log("Retrieved forms data:", formsData);
-      setForms(formsData);
-    } catch (err) {
-      console.error("Error details:", {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status
-      });
-      if (err.response?.status === 401) {
-        setError('Authentication error. Please login again.');
-      } else {
-        setError('Failed to load weekly discussions. Please try again later.');
+      
+      // Continue with data loading
+      try {
+        setLoading(true);
+        console.log("Fetching weekly forms...");
+        const formsData = await getMyWeeklyForms();
+        console.log("Retrieved forms data:", formsData);
+        setForms(formsData);
+      } catch (err) {
+        console.error("Error details:", {
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status
+        });
+        
+        if (err.response?.status === 401) {
+          setError('Authentication error. Please login again.');
+          router.push('/test-auth');
+        } else {
+          setError('Failed to load weekly discussions. Please try again later.');
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  };
-  fetchForms();
-}, [isAuthenticated]);
+    };
+    
+    checkAuth();
+  }, [isAuthenticated, authLoading, router]);
 
-  
+  // Show loading state while auth is being checked
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4 mx-auto"></div>
+          <p>Loading authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Filter forms based on active filter
   const getFilteredForms = () => {
     if (!forms || forms.length === 0) return [];
@@ -212,18 +169,7 @@ useEffect(() => {
       <Head>
         <title>O3 WEEKLY DISCUSSION | OKR Tracker</title>
       </Head>
-      {/* <Header
-        isAuthenticated={isAuthenticated}
-        user={JSON.parse(localStorage?.getItem('user') || '{}')}
-        hideTeamDiscussions={true}
-      /> */}
-      {isClient && (
-          <Header
-            isAuthenticated={isAuthenticated}
-            user={user}
-            hideTeamDiscussions={true}
-          />
-        )}
+      <Header user={user} />
       <div className="container mx-auto px-4 py-4 sm:py-8 content-with-fixed-header">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-xl sm:text-3xl font-bold">O3 WEEKLY DISCUSSION</h1>
