@@ -5,7 +5,8 @@ import api from '../../lib/api';
 import EditOKRForm from '../forms/EditOKRForm';
 
 const OKRNode = ({ data, isConnectable }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  // Initialize isExpanded based on the stored state from parent if available
+  const [isExpanded, setIsExpanded] = useState(data.isNodeExpanded || false);
   const [showEditOKRForm, setShowEditOKRForm] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [businessUnits, setBusinessUnits] = useState([]);
@@ -326,30 +327,29 @@ const OKRNode = ({ data, isConnectable }) => {
   
   // Notify parent when expansion state changes
   useEffect(() => {
-    if (data.onToggleExpand) {
-      if (isExpanded) {
-        // Wait for the expanded content to render before measuring height
-        setTimeout(() => {
-          const nodeElement = nodeRef.current;
-          if (nodeElement) {
-            // Calculate the extra height needed beyond the default node height
-            // Default node height is about 100px, so we subtract that from total height
-            const expandedHeight = nodeElement.getBoundingClientRect().height;
-            const additionalHeight = Math.max(0, expandedHeight - 100);
-            
-            // Call the parent's callback function with the expanded state and calculated height
-            data.onToggleExpand(isExpanded, additionalHeight);
-          } else {
-            // Fallback if element not available
-            data.onToggleExpand(isExpanded);
+    if (isExpanded) {
+      // Wait for the expanded content to render before measuring height
+      setTimeout(() => {
+        const nodeElement = nodeRef.current;
+        if (nodeElement) {
+          // Calculate the extra height needed beyond the default node height
+          // Get precise measurements and add a little extra padding for safety
+          const expandedHeight = nodeElement.getBoundingClientRect().height;
+          const additionalHeight = Math.max(0, Math.ceil(expandedHeight) - 100 + 20); // Add 20px extra padding
+          
+          // Use the global handler to communicate with parent
+          if (window.__okrTreeToggleExpand && typeof window.__okrTreeToggleExpand === 'function') {
+            window.__okrTreeToggleExpand(data.key, isExpanded, additionalHeight);
           }
-        }, 50); // Short delay to ensure DOM is updated
-      } else {
-        // When collapsing, just notify without height
-        data.onToggleExpand(isExpanded);
+        }
+      }, 50); // Short delay to ensure DOM is updated
+    } else {
+      // When collapsing, notify with zero additional height
+      if (window.__okrTreeToggleExpand && typeof window.__okrTreeToggleExpand === 'function') {
+        window.__okrTreeToggleExpand(data.key, isExpanded, 0);
       }
     }
-  }, [isExpanded, data.onToggleExpand]);
+  }, [isExpanded, data.key]);
 
   // Add a useEffect to log when filter matches change
   useEffect(() => {
@@ -370,6 +370,7 @@ const OKRNode = ({ data, isConnectable }) => {
       />      <div
         ref={nodeRef}
         className={`okr-node rounded shadow-md p-2 min-w-[200px] transition-all duration-300 
+          ${isExpanded ? 'okr-node-expanded' : ''}
           ${data.isAssignedToCurrentUser ? 'border-2 border-blue-500' : ''}
           ${data.matchesBusinessUnitFilter ? 'business-unit-filtered' : ''}
           ${data.matchesAssignedToFilter ? 'assigned-to-filtered' : ''}`}
@@ -378,7 +379,7 @@ const OKRNode = ({ data, isConnectable }) => {
           minHeight: '100px',
           backgroundColor: data.matchesBusinessUnitFilter ? '#8fadd9' : 
                            data.matchesAssignedToFilter ? '#d179ba' : '',
-          zIndex: (data.matchesBusinessUnitFilter || data.matchesAssignedToFilter) ? 5 : 'auto',
+          zIndex: isExpanded ? 10 : (data.matchesBusinessUnitFilter || data.matchesAssignedToFilter) ? 5 : 'auto',
           borderColor: data.isAssignedToCurrentUser ? '#3b82f6' : 'transparent'
         }}
       >
@@ -396,7 +397,10 @@ const OKRNode = ({ data, isConnectable }) => {
             backgroundColor: data.matchesBusinessUnitFilter ? '#8fadd9' : 
                             data.matchesAssignedToFilter ? '#d179ba' : ''
           }}
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={() => {
+            console.log(`Node ${data.key} clicked, toggling expanded state from ${isExpanded} to ${!isExpanded}`);
+            setIsExpanded(!isExpanded);
+          }}
         ><div className="flex justify-between items-center">
             <h4 className="font-semibold text-gray-900 truncate text-sm sm:text-base" title={data.name || data.title}>
               {data.name || data.title}
@@ -416,7 +420,14 @@ const OKRNode = ({ data, isConnectable }) => {
             <span className={`px-1 py-0.5 sm:px-2 sm:py-1 rounded-full ${getStatusColor(data.status)}`}>
               {typeof data.status === 'boolean' ? (data.status ? 'Active' : 'Inactive') : data.status}
             </span>
-            <span>Due: {formatDate(data.due_date || data.dueDate)}</span>
+            <div className="flex items-center">
+              <span>Due: {formatDate(data.due_date || data.dueDate)}</span>
+              <span className={`ml-1 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
           </div>
         </div>
         
@@ -474,9 +485,36 @@ const OKRNode = ({ data, isConnectable }) => {
                   
                   <button
                     onClick={(e) => {
+                      // Stop event propagation to prevent parent click handlers
+                      e.preventDefault();
                       e.stopPropagation();
+                      
+                      console.log('Add Sub button clicked for OKR:', data.okr_id);
+                      console.log('onAddSubObjective function exists:', typeof data.onAddSubObjective === 'function');
+                      
+                      // Primary approach: Use the callback passed via data
                       if (typeof data.onAddSubObjective === 'function') {
+                        console.log('Calling onAddSubObjective with data:', data);
                         data.onAddSubObjective(data);
+                        return;
+                      } 
+                      
+                      console.error('onAddSubObjective is not a function!');
+                      
+                      // Fallback approach 1: Use the global handler directly
+                      if (typeof window !== 'undefined' && window.__okrTreeAddSubObjective) {
+                        console.log('Using global __okrTreeAddSubObjective as fallback');
+                        window.__okrTreeAddSubObjective(data);
+                        return;
+                      }
+                      
+                      console.error('No global __okrTreeAddSubObjective handler found!');
+                      
+                      // Fallback approach 2: Use a custom event to notify the parent component
+                      if (typeof window !== 'undefined') {
+                        console.log('Dispatching custom event for add sub objective');
+                        const event = new CustomEvent('okr-add-sub', { detail: { data } });
+                        window.dispatchEvent(event);
                       }
                     }}
                     className="text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 bg-[#F6490D] hover:bg-[#E03D00] text-white rounded"

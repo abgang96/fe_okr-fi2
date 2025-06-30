@@ -38,11 +38,11 @@ const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMember
   // Find root OKRs (those without a parent_okr)
   const rootOKRs = okrsList.filter(okr => !okr.parent_okr).sort((a, b) => a.okr_id - b.okr_id);;
   console.log('Root OKRs found:', rootOKRs);
-    // Node dimensions and spacing - reduced by 20-30%
-  const nodeWidth = 220; // Reduced from 280
-  const nodeHeight = 100; // Reduced from 130
-  const verticalSpacing = 150; // Reduced from 180
-  const horizontalGap = 30;   // Reduced from 40
+    // Node dimensions and spacing - optimized for expanded nodes
+  const nodeWidth = 220; 
+  const nodeHeight = 100; 
+  const verticalSpacing = 180; // Increased spacing to better accommodate expanded nodes
+  const horizontalGap = 30;
     // Build nodes array
   const nodes = [];
   const edges = [];
@@ -129,19 +129,25 @@ const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMember
       }
     }
     
-    // Add additional offsets for all expanded nodes at levels above
-    // This affects all nodes at the same level regardless of path
+    // For direct parent-child relationships, we only need to consider direct ancestors
+    // and not all expanded nodes at all levels above
+    // This approach avoids double-counting and excessive spacing
     if (level > 0) {
-      // For each level, check if there are expanded nodes that need extra space
-      for (let l = 0; l < level; l++) {
-        // Look for expanded nodes at this level that would affect nodes below
-        Object.keys(expandedNodes).forEach(expandedNodeId => {
-          const expandedNode = nodes.find(n => n.id === expandedNodeId);
-          if (expandedNode && parseInt(expandedNode.data.level) === l) {
-            // Add extra space for expanded nodes (depends on how much extra height an expanded node needs)
-            additionalYOffset += expandedNodes[expandedNodeId] ? expandedNodes[expandedNodeId] : 0;
-          }
-        });
+      // Start from the parent node and check upwards for expanded nodes
+      let parentNodeId = parentX;
+      while (parentNodeId) {
+        // If this ancestor is expanded, add its extra height
+        if (expandedNodes[parentNodeId]) {
+          additionalYOffset += expandedNodes[parentNodeId];
+        }
+        
+        // Move up to this node's parent
+        const parentNode = nodes.find(n => n.id === parentNodeId);
+        if (parentNode) {
+          parentNodeId = parentNode.data.parentNodeId;
+        } else {
+          break;
+        }
       }
     }
     
@@ -585,7 +591,12 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
         ...node,
         data: {
           ...node.data,
-          onContinueIteration: handleContinueIteration
+          onContinueIteration: handleContinueIteration,
+          onAddSubObjective: (okrData) => {
+            if (typeof window !== 'undefined' && window.__okrTreeAddSubObjective) {
+              window.__okrTreeAddSubObjective(okrData);
+            }
+          }
         }
       }));
       
@@ -596,6 +607,56 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
     }
   }, [okrsList, users, currentUser, teamMembers, setNodes, setEdges, handleContinueIteration, filterOptions, expandedNodes]);
 
+  // Load persisted expanded nodes state from localStorage on mount
+  useEffect(() => {
+    try {
+      const persistedExpandedNodes = localStorage.getItem('okr-tree-expanded-nodes');
+      if (persistedExpandedNodes) {
+        const parsedState = JSON.parse(persistedExpandedNodes);
+        setExpandedNodes(parsedState);
+        console.log('Loaded persisted expanded nodes state:', parsedState);
+      }
+    } catch (e) {
+      console.error('Failed to load persisted expanded nodes state:', e);
+    }
+  }, []);
+  
+  // Effect to rebuild the tree when expandedNodes state changes
+  useEffect(() => {
+    // Only rebuild if we have OKRs to work with
+    if (okrsList.length > 0) {
+      console.log('Rebuilding tree due to node expansion state change');
+      
+      const { nodes: treeNodes, edges: treeEdges } = buildTreeStructure(
+        okrsList, 
+        users, 
+        currentUser, 
+        teamMembers, 
+        filterOptions, 
+        expandedNodes
+      );
+      
+      // Add callbacks to each node
+      const nodesWithCallbacks = treeNodes.map(node => ({
+        ...node,
+        data: {
+          ...node.data,
+          onContinueIteration: handleContinueIteration,
+          // Store the expanded state in each node for persistence
+          isNodeExpanded: !!expandedNodes[node.id],
+          onAddSubObjective: (okrData) => {
+            if (typeof window !== 'undefined' && window.__okrTreeAddSubObjective) {
+              window.__okrTreeAddSubObjective(okrData);
+            }
+          }
+        }
+      }));
+      
+      setNodes(nodesWithCallbacks);
+      setEdges(treeEdges);
+    }
+  }, [expandedNodes, okrsList]); // Only depend on expandedNodes and okrsList
+  
   // Filter users based on search input
   useEffect(() => {
     if (users && users.length > 0) {
@@ -654,7 +715,22 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
           expandedNodes
         );
         
-        setNodes(newNodes);
+        // Add callbacks to each node
+        const nodesWithCallbacks = newNodes.map(node => ({
+          ...node,
+          data: {
+            ...node.data,
+            onContinueIteration: handleContinueIteration,
+            isNodeExpanded: !!expandedNodes[node.id],
+            onAddSubObjective: (okrData) => {
+              if (typeof window !== 'undefined' && window.__okrTreeAddSubObjective) {
+                window.__okrTreeAddSubObjective(okrData);
+              }
+            }
+          }
+        }));
+        
+        setNodes(nodesWithCallbacks);
         setEdges(newEdges);
       }, 10);
     }
@@ -682,7 +758,22 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
           expandedNodes
         );
         
-        setNodes(newNodes);
+        // Add callbacks to each node
+        const nodesWithCallbacks = newNodes.map(node => ({
+          ...node,
+          data: {
+            ...node.data,
+            onContinueIteration: handleContinueIteration,
+            isNodeExpanded: !!expandedNodes[node.id],
+            onAddSubObjective: (okrData) => {
+              if (typeof window !== 'undefined' && window.__okrTreeAddSubObjective) {
+                window.__okrTreeAddSubObjective(okrData);
+              }
+            }
+          }
+        }));
+        
+        setNodes(nodesWithCallbacks);
         setEdges(newEdges);
       }, 10);
     }
@@ -748,16 +839,52 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       window.__okrTreeAddSubObjective = (okrData) => {
+        console.log('Global __okrTreeAddSubObjective handler called with data:', okrData);
         setFormType('sub');
         setSelectedOKR(okrData);
+        
+        console.log('Setting showAddOKRForm to true');
         setShowAddOKRForm(true);
+        
+        // Add a slight delay to check if the form is actually showing
+        setTimeout(() => {
+          console.log('Form visibility check (after delay):', { showAddOKRForm: true });
+        }, 100);
       };
+      
+      console.log('Global __okrTreeAddSubObjective handler registered');
     }
     
     // Clean up the global handler when the component unmounts
     return () => {
       if (typeof window !== 'undefined') {
         window.__okrTreeAddSubObjective = undefined;
+        console.log('Global __okrTreeAddSubObjective handler removed');
+      }
+    };
+  }, []);
+  
+  // Add listener for custom okr-add-sub event
+  useEffect(() => {
+    const handleAddSubEvent = (event) => {
+      console.log('Received custom okr-add-sub event', event.detail);
+      const { data } = event.detail;
+      
+      if (data && data.okr_id) {
+        console.log('Setting up to add sub-objective for OKR:', data.okr_id);
+        setFormType('sub');
+        setSelectedOKR(data);
+        setShowAddOKRForm(true);
+      }
+    };
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('okr-add-sub', handleAddSubEvent);
+    }
+    
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('okr-add-sub', handleAddSubEvent);
       }
     };
   }, []);
@@ -769,11 +896,26 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
       window.__okrTreeToggleExpand = (nodeId, isExpanded, additionalHeight = 150) => {
         console.log(`Node ${nodeId} expansion changed to ${isExpanded}, additional height: ${additionalHeight}px`);
         
+        // Store the expanded nodes in localStorage to persist across renders
+        const persistExpansion = (newState) => {
+          try {
+            localStorage.setItem('okr-tree-expanded-nodes', JSON.stringify(newState));
+          } catch (e) {
+            console.error('Failed to persist expanded nodes state:', e);
+          }
+        };
+        
         // Update expanded nodes state with the exact measured height for this node
-        setExpandedNodes(prev => ({
-          ...prev,
-          [nodeId]: isExpanded ? additionalHeight : 0 // Use measured height or 0 when collapsed
-        }));
+        setExpandedNodes(prev => {
+          const newState = {
+            ...prev,
+            [nodeId]: isExpanded ? additionalHeight : 0 // Use measured height or 0 when collapsed
+          };
+          
+          // Persist the expanded state
+          persistExpansion(newState);
+          return newState;
+        });
       };
     }
     
@@ -788,7 +930,7 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
   // Fetch OKRs and update graph when filter changes or selected root okr changes
   useEffect(() => {
     fetchOKRs();
-  }, [filter, selectedRootOkr]);
+  }, [filter, selectedRootOkr, fetchOKRs]);
   
   // Set initial zoom level when ReactFlow instance is available
   useEffect(() => {
@@ -1010,8 +1152,9 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
         </div>
       )}
         {/* Add OKR Form Modal */}
-      {showAddOKRForm && (        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-4 sm:p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      {console.log('Rendering OKR Form Modal. showAddOKRForm:', showAddOKRForm, 'formType:', formType, 'selectedOKR:', selectedOKR)}
+      {showAddOKRForm && (        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 add-okr-form-modal">
+          <div className="bg-white p-4 sm:p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{zIndex: 9999}}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg sm:text-xl font-semibold">
                 {formType === 'root' 

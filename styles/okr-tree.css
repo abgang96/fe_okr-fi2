@@ -29,3 +29,49 @@ div.assigned-to-filtered {
 .okr-node {
   transition: all 0.3s ease-in-out !important;
 }
+
+/* Add a subtle shadow to expanded nodes to make them stand out */
+.okr-node-expanded {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  z-index: 10 !important; /* Keep expanded nodes above others */
+}
+
+/* Add transition for ReactFlow nodes and edges for smoother animations */
+.react-flow__node {
+  transition: transform 0.3s ease-in-out;
+}
+
+.react-flow__edge {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Prevent expanded node content from being overlapped */
+.okr-node-expanded .react-flow__handle {
+  z-index: 15 !important;
+}
+
+/* Make sure node content doesn't get cut off */
+.okr-node-expanded .mt-4 {
+  z-index: 5;
+  position: relative;
+}
+
+/* Better positioning for expanded nodes */
+.react-flow__node.okr-node-expanded {
+  z-index: 20 !important;
+}
+
+/* Make sure edges don't overlap node content */
+.react-flow__edge {
+  pointer-events: none;
+}
+
+/* Make sure modal is on top of everything */
+.add-okr-form-modal {
+  z-index: 9999 !important;
+  position: fixed !important;
+}
+
+.add-okr-form-modal * {
+  z-index: 9999 !important;
+}
