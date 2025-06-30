@@ -1153,8 +1153,9 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
       )}
         {/* Add OKR Form Modal */}
       {console.log('Rendering OKR Form Modal. showAddOKRForm:', showAddOKRForm, 'formType:', formType, 'selectedOKR:', selectedOKR)}
-      {showAddOKRForm && (        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 add-okr-form-modal">
-          <div className="bg-white p-4 sm:p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{zIndex: 9999}}>
+      {showAddOKRForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4 add-okr-form-modal">
+          <div className="bg-white p-4 sm:p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{zIndex: 9999, position: "relative"}}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg sm:text-xl font-semibold">
                 {formType === 'root' 

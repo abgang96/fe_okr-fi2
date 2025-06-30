@@ -75,3 +75,40 @@ div.assigned-to-filtered {
 .add-okr-form-modal * {
   z-index: 9999 !important;
 }
+
+/* Enhanced dropdown styling to ensure proper overlapping */
+.dropdown-overlapping {
+  position: absolute !important;
+  z-index: 99999 !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
+  background-color: white !important;
+  opacity: 1 !important;
+}
+
+/* Ensure z-index is respected for dropdowns within modals */
+.add-okr-form-modal .relative {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* Ensure the dropdown appears above all other content */
+.add-okr-form-modal .relative:hover,
+.add-okr-form-modal .relative:focus-within {
+  z-index: 9999 !important;
+}
+
+/* Style for dropdown containers to ensure proper z-index */
+.dropdown-container {
+  position: relative;
+}
+
+.dropdown-container:hover, 
+.dropdown-container:focus-within {
+  z-index: 9999 !important;
+}
+
+/* Force dropdown menus to appear above all other elements */
+.dropdown-container .absolute {
+  transform: translate3d(0, 0, 0);
+  filter: drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.2));
+}

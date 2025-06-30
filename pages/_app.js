@@ -1,6 +1,8 @@
 import '../styles/globals.css';
 import '../styles/header.css';
 import '../styles/okr-tree.css';
+import '../styles/toggleStyles.css';
+import '../styles/dropdown-portal.css';
 
 import { AuthProvider } from '../components/auth/AuthProvider';
 import { AuthAPIClientLoader } from '../lib/apiAuthConfig';

@@ -64,17 +64,23 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
-      // Only close the dropdown if not clicking on the search input or inside the dropdown
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        // Add a slight delay to allow handling of click events inside the dropdown
+      // Handle the users dropdown
+      const userDropdownElement = document.querySelector('.dropdown-menu-portal');
+      const isClickInUserDropdown = userDropdownElement && userDropdownElement.contains(event.target);
+      
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target) && !isClickInUserDropdown) {
+        // Close the dropdown if we're clicking outside both the trigger and the dropdown itself
         setTimeout(() => {
           setShowDropdown(false);
-          // Clear search query when closing dropdown
           setSearchQuery('');
         }, 100);
       }
       
-      if (businessUnitDropdownRef.current && !businessUnitDropdownRef.current.contains(event.target)) {
+      // Handle the business units dropdown
+      const buDropdownElement = document.querySelectorAll('.dropdown-menu-portal')[1];
+      const isClickInBuDropdown = buDropdownElement && buDropdownElement.contains(event.target);
+      
+      if (businessUnitDropdownRef.current && !businessUnitDropdownRef.current.contains(event.target) && !isClickInBuDropdown) {
         setShowBusinessUnitDropdown(false);
       }
     }
@@ -324,7 +330,7 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
       </div>
       
       <div className="grid grid-cols-2 gap-4">
-        <div className="mb-4 relative" ref={dropdownRef}>
+        <div className="mb-4 relative dropdown-container" ref={dropdownRef} style={{position: 'relative', zIndex: 30}}>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Assigned To (Multiple)
           </label>
@@ -340,11 +346,23 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
             </svg>
           </div>
           
-          {/* Dropdown content */}
+          {/* Dropdown content - now using portal-like positioning */}
           {showDropdown && (
-            <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-300 max-h-60 overflow-y-auto">
+            <div className="fixed dropdown-menu-portal" style={{
+              position: 'fixed',
+              left: dropdownRef.current?.getBoundingClientRect().left + 'px',
+              top: dropdownRef.current?.getBoundingClientRect().bottom + 'px',
+              width: dropdownRef.current?.offsetWidth + 'px',
+              zIndex: 100000,
+              backgroundColor: 'white',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+              borderRadius: '0.375rem',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              maxHeight: '240px',
+              overflowY: 'auto'
+            }}>
               {/* Search input */}
-              <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
+              <div className="sticky top-0 bg-white p-2 border-b border-gray-200" style={{backgroundColor: 'white'}}>
                 <input
                   type="text"
                   value={searchQuery}
@@ -465,7 +483,7 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
       </div>
       
       {/* Business Unit Selection */}
-      <div className="mb-4 relative" ref={businessUnitDropdownRef}>
+      <div className="mb-4 relative dropdown-container" ref={businessUnitDropdownRef} style={{position: 'relative', zIndex: 20}}>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Business Units
         </label>
@@ -507,9 +525,21 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
           </div>
         )}
         
-        {/* Dropdown menu */}
+        {/* Dropdown menu - now using portal pattern like the users dropdown */}
         {showBusinessUnitDropdown && (
-          <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-300 max-h-60 overflow-y-auto">
+          <div className="fixed dropdown-menu-portal" style={{
+            position: 'fixed',
+            left: businessUnitDropdownRef.current?.getBoundingClientRect().left + 'px',
+            top: businessUnitDropdownRef.current?.getBoundingClientRect().bottom + 'px',
+            width: businessUnitDropdownRef.current?.offsetWidth + 'px',
+            zIndex: 100000,
+            backgroundColor: 'white',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+            borderRadius: '0.375rem',
+            border: '1px solid rgba(0, 0, 0, 0.1)',
+            maxHeight: '240px',
+            overflowY: 'auto'
+          }}>
             {businessUnits.length === 0 ? (
               <div className="px-4 py-2 text-sm text-gray-500">
                 No business units available

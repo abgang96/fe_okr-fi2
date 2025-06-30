@@ -1,0 +1,49 @@
+/* Dropdown Portal Styles */
+
+/* Ensure dropdown portals are always on top */
+.dropdown-menu-portal {
+  z-index: 100000 !important;
+  background-color: white !important;
+  opacity: 1 !important;
+}
+
+/* Make sure the dropdown portal has a proper layering context */
+.dropdown-menu-portal {
+  position: fixed !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  border-radius: 0.375rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Ensure dropdown items can be clicked */
+.dropdown-menu-portal > div {
+  z-index: 100001 !important;
+}
+
+/* Fixed max height with scrolling */
+.dropdown-menu-portal {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+/* Search input styling */
+.dropdown-menu-portal input {
+  z-index: 100002 !important;
+  position: sticky;
+  top: 0;
+}
+
+/* Prevent event propagation issues */
+.dropdown-menu-portal * {
+  pointer-events: auto !important;
+}
+
+/* Fix for responsive views */
+@media screen and (max-width: 640px) {
+  .dropdown-menu-portal {
+    max-height: 180px;
+    width: calc(100% - 32px) !important; /* Prevent overflow on mobile */
+    left: 16px !important;
+    right: 16px !important;
+  }
+}

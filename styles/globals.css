@@ -269,3 +269,12 @@ div.assigned-to-filtered {
 button:disabled {
   cursor: not-allowed;
 }
+
+/* Ensure dropdown menus are always on top of other elements */
+.absolute.z-\[9999\],
+.dropdown-overlapping {
+  position: absolute !important;
+  z-index: 99999 !important; 
+  background-color: white !important;
+  opacity: 1 !important;
+}
