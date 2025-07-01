@@ -171,7 +171,7 @@ export default function TeamDiscussions() {
   if (loading) {
     return (      <div>
         <Head>
-          <title>Team Discussions | OKR Tracker</title>
+          <title>My Team | OKR Tracker</title>
         </Head>
         
         {/* <Header 
@@ -249,7 +249,7 @@ export default function TeamDiscussions() {
   return (
     <div>
       <Head>
-        <title>Team Discussions | OKR Tracker</title>
+        <title>My Team | OKR Tracker</title>
       </Head>
       
       {/* <Header 
@@ -266,7 +266,7 @@ export default function TeamDiscussions() {
       
       <div className="container mx-auto px-4 py-8 content-with-fixed-header">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Team Discussions</h1>
+          <h1 className="text-2xl font-bold">My Team</h1>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">

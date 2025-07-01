@@ -233,7 +233,7 @@ export default function ReviewForm() {
           <div className="flex gap-4">
             <Link href="/team-discussions">
               <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
-                Back to Team Discussions
+                Back to My Team
               </button>
             </Link>
           </div>
@@ -268,7 +268,7 @@ export default function ReviewForm() {
           
           <Link href="/team-discussions">
             <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md">
-              Team Discussions
+              My Team
             </button>
           </Link>
         </div>

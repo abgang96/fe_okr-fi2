@@ -37,7 +37,7 @@ section,
 .page-container,
 .content-container,
 .okr-tree-container {
-  padding-top: 30px !important; /* Match header height */
+  /* padding-top: 30px !important; Match header height */
   margin-top: 0 !important;
 }
 
@@ -127,7 +127,7 @@ section,
 
 /* Admin master specific adjustments */
 .container {
-  padding-top: 64px !important;
+  padding-top: 7% !important;
 }
 
 /* Responsive adjustments for the header */
