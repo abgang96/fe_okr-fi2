@@ -218,7 +218,7 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
       department: parseInt(department),
       start_date: startDateFormatted,
       due_date: dueDateFormatted,
-      status: true,
+      status: 'New', // Using the new status enum instead of boolean
       progress_percent: 0,
       isMeasurable: isMeasurable, // Add the isMeasurable field
       // Add required backend fields - make sure these are arrays

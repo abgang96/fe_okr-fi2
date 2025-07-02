@@ -157,14 +157,28 @@ const OKRNode = ({ data, isConnectable }) => {
   }, [showEditOKRForm]);
   
   const getStatusColor = (status) => {
+    // Handle both legacy boolean values and new string status values
+    if (typeof status === 'boolean') {
+      return status ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
+    }
+    
+    // Handle new string status values
     switch (status) {
-      case 'Completed':
-      case true:
+      case 'New':
+        return 'bg-blue-100 text-blue-800';
+      case 'Planning':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'Active':
         return 'bg-green-100 text-green-800';
-      case 'In Progress':
+      case 'Hold':
+        return 'bg-orange-100 text-orange-800';
+      case 'Confirmation awaited':
+        return 'bg-purple-100 text-purple-800';
+      case 'Completed':
+        return 'bg-teal-100 text-teal-800';
+      case 'In Progress': // For backward compatibility
         return 'bg-yellow-100 text-yellow-800';
-      case 'Not Started':
-      case false:
+      case 'Not Started': // For backward compatibility
         return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -418,7 +432,7 @@ const OKRNode = ({ data, isConnectable }) => {
           
           <div className="flex justify-between mt-1 sm:mt-2 text-xs text-gray-600">
             <span className={`px-1 py-0.5 sm:px-2 sm:py-1 rounded-full ${getStatusColor(data.status)}`}>
-              {typeof data.status === 'boolean' ? (data.status ? 'Active' : 'Inactive') : data.status}
+              {data.status}
             </span>
             <div className="flex items-center">
               <span>Due: {formatDate(data.due_date || data.dueDate)}</span>

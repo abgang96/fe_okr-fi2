@@ -14,7 +14,7 @@ const EditOKRForm = ({ okrData, users = [], departments = [], businessUnits = []
   const [department, setDepartment] = useState('');
   const [selectedBusinessUnits, setSelectedBusinessUnits] = useState([]);
   const [progressPercent, setProgressPercent] = useState(0);
-  const [status, setStatus] = useState(true);
+  const [status, setStatus] = useState('New');
   const [errors, setErrors] = useState({});
   const dropdownRef = useRef(null);
   const businessUnitDropdownRef = useRef(null);
@@ -74,7 +74,18 @@ const EditOKRForm = ({ okrData, users = [], departments = [], businessUnits = []
       setDueDate(okrData.due_date || okrData.dueDate || '');
       setDepartment(okrData.department || '');
       setProgressPercent(okrData.progress_percent || okrData.progressPercent || 0);
-      setStatus(okrData.status !== undefined ? okrData.status : true);
+      
+      // Handle status: if it's a boolean value from legacy data, convert to string status
+      if (okrData.status !== undefined) {
+        if (typeof okrData.status === 'boolean') {
+          setStatus(okrData.status ? 'Active' : 'Hold');
+        } else {
+          setStatus(okrData.status);
+        }
+      } else {
+        setStatus('New');
+      }
+      
       setIsMeasurable(okrData.isMeasurable !== undefined ? okrData.isMeasurable : false); // Load isMeasurable value
       
       // Handle assigned users
@@ -476,25 +487,24 @@ const EditOKRForm = ({ okrData, users = [], departments = [], businessUnits = []
       {/* Toggle container with specific z-index to prevent overlap with dropdowns */}
       <div className="mb-5 relative z-0 mt-6">
         <div className="flex flex-col md:flex-row gap-6">
-          {/* Status Toggle */}
+          {/* Status Dropdown */}
           <div className="mb-2 md:mb-0">
-            <label className="flex items-center text-sm font-medium text-gray-700 cursor-pointer">
-              <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                <input 
-                  type="checkbox" 
-                  name="status" 
-                  id="status" 
-                  checked={status === true}
-                  onChange={() => setStatus(!status)}
-                  className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
-                />
-                <label 
-                  htmlFor="status" 
-                  className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
-                ></label>
-              </div>
-              <span>Status</span>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="status">
+              Status
             </label>
+            <select
+              id="status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md border-gray-300"
+            >
+              <option value="New">New</option>
+              <option value="Planning">Planning</option>
+              <option value="Active">Active</option>
+              <option value="Hold">Hold</option>
+              <option value="Confirmation awaited">Confirmation awaited</option>
+              <option value="Completed">Completed</option>
+            </select>
           </div>
           
           {/* Measurable Toggle */}

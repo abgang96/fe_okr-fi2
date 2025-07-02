@@ -37,7 +37,7 @@ section,
 .page-container,
 .content-container,
 .okr-tree-container {
-  /* padding-top: 30px !important; Match header height */
+  padding-top: 15px !important; /* Reduced from 30px to fix excessive padding */
   margin-top: 0 !important;
 }
 
