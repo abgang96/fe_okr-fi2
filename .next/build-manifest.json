@@ -27,15 +27,10 @@
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
-    "/auth/microsoft-callback": [
+    "/weekly-discussions": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/auth/microsoft-callback.js"
-    ],
-    "/test-auth": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/test-auth.js"
+      "static/chunks/pages/weekly-discussions.js"
     ]
   },
   "ampFirstPages": []

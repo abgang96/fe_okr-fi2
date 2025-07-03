@@ -7,80 +7,14 @@ import EditOKRForm from '../forms/EditOKRForm';
 const OKRNode = ({ data, isConnectable }) => {
   // Initialize isExpanded based on the stored state from parent if available
   const [isExpanded, setIsExpanded] = useState(data.isNodeExpanded || false);
-  const [showEditOKRForm, setShowEditOKRForm] = useState(false);
-  const [departments, setDepartments] = useState([]);
-  const [businessUnits, setBusinessUnits] = useState([]);
   const [assignedUsers, setAssignedUsers] = useState([]);  
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
-  const [users, setUsers] = useState([]);
   const [isUserAssigned, setIsUserAssigned] = useState(false);// Check if current user has edit permission for this OKR
   const hasEditPermission = () => {
     // Give everyone access to edit/delete all OKRs
     return true;
     
-    /* Previous permission logic removed:
-    // If there's no current user data, deny permission
-    if (!data.currentUser) {
-      console.log('No current user data available');
-      return false;
-    }
-    
-    // Get current user's Teams ID
-    const currentUserTeamsId = data.currentUser.teams_id;
-    console.log('Current user teams_id:', currentUserTeamsId);
-    
-    // First check if current user is directly assigned to this OKR
-    const isDirectlyAssigned = assignedUsers.some(user => 
-      user.user_id === currentUserTeamsId
-    );
-    
-    if (isDirectlyAssigned) {
-      console.log('User is directly assigned to this OKR');
-      return true;
-    }
-    
-    // If not directly assigned, check if any team member is assigned to this OKR
-    if (data.teamMembers && data.teamMembers.length > 0) {
-      const teamMemberIds = data.teamMembers.map(member => member.teams_id);
-      console.log('Team member IDs:', teamMemberIds);
-      console.log('Assigned user IDs:', assignedUsers.map(user => user.user_id));
-      
-      // Check if any team member is assigned to this OKR
-      const isTeamMemberAssigned = assignedUsers.some(user => 
-        teamMemberIds.includes(user.user_id)
-      );
-      
-      if (isTeamMemberAssigned) {
-        console.log('Team member is assigned to this OKR');
-        return true;
-      }
-    }
-      // Check if user is a manager of any assigned user (check manager relationship)
-    if (users.length > 0 && assignedUsers.length > 0) {
-      const assignedUserIds = assignedUsers.map(user => user.user_id);
-      console.log('Assigned user IDs:', assignedUserIds);
-      
-      // Log all users with their teams_id and manager_id for debugging
-      console.log('Users data:', users.map(user => ({
-        teams_id: user.teams_id,
-        manager_id: user.manager_id,
-        name: user.user_name
-      })));
-      
-      // Find if any user with manager_id matching current user's teams_id is assigned to this OKR
-      const isManagerOfAssignedUser = users.some(user => 
-        assignedUserIds.includes(user.teams_id) && user.manager_id === currentUserTeamsId
-      );
-      
-      if (isManagerOfAssignedUser) {
-        console.log('User is a manager of an assigned user');
-        return true;
-      }
-    }
-    
-    console.log('User does not have edit permission for this OKR');
-    return false;
-    */
+    /* Permission logic is simplified since we've moved complex checks to the parent component */
   };
     // Fetch assigned users for this OKR
   useEffect(() => {
@@ -92,10 +26,6 @@ const OKRNode = ({ data, isConnectable }) => {
         // Use the new endpoint we added for getting assigned users
         const usersData = await api.getOKRAssignedUsers(data.okr_id);
         setAssignedUsers(usersData);
-        
-        // Also fetch all users for manager relationship check
-        const allUsersData = await api.getUsers();
-        setUsers(allUsersData);
       } catch (error) {
         console.error('Error fetching assigned users:', error);
         // Fallback to just showing assigned_users_details if already in the data
@@ -133,28 +63,7 @@ const OKRNode = ({ data, isConnectable }) => {
     checkIfUserIsAssigned();
   }, [assignedUsers, data.currentUser]);
   
-  // Fetch users and departments for edit forms
-  useEffect(() => {
-    const fetchFormData = async () => {
-      try {
-        const [usersData, departmentsData, okrsData, businessUnitsData] = await Promise.all([
-          api.getUsers(),
-          api.getDepartments(),
-          api.getOKRs(),
-          api.getBusinessUnits()
-        ]);
-        setUsers(usersData);
-        setDepartments(departmentsData);
-        setBusinessUnits(businessUnitsData);
-      } catch (error) {
-        console.error('Error fetching form data:', error);
-      }
-    };
-    
-    if (showEditOKRForm) {
-      fetchFormData();
-    }
-  }, [showEditOKRForm]);
+  // We no longer need to fetch form data as it's handled by the parent component
   
   const getStatusColor = (status) => {
     // Handle both legacy boolean values and new string status values
@@ -192,39 +101,7 @@ const OKRNode = ({ data, isConnectable }) => {
     return dateString;
   };
   
-  // Handle edit OKR form submission
-  const handleEditOKR = async (formData) => {
-    try {
-      const updatedOKR = await api.updateOKR(formData.okrId, formData);
-      // Update the node data with the updated OKR info
-      alert('OKR updated successfully!');
-      setShowEditOKRForm(false);
-      
-      // Properly update all data properties to trigger re-render
-      if (data.okr_id === updatedOKR.okr_id) {
-        // Force a re-render by making sure all fields are properly updated
-        data.progress_percent = updatedOKR.progress_percent;
-        data.name = updatedOKR.name;
-        data.description = updatedOKR.description;
-        data.status = updatedOKR.status;
-        data.due_date = updatedOKR.due_date;
-        data.assumptions = updatedOKR.assumptions;
-        data.assigned_users_details = updatedOKR.assigned_users_details;
-        
-        // Update assigned users immediately
-        if (updatedOKR.assigned_users_details) {
-          setAssignedUsers(updatedOKR.assigned_users_details);
-        }
-        
-        // Force node re-render
-        setIsExpanded(false);
-        setTimeout(() => setIsExpanded(true), 10);
-      }
-    } catch (error) {
-      console.error('Error updating OKR:', error);
-      alert('Failed to update OKR. Please try again.');
-    }
-  };
+  // Edit OKR is now handled by the parent OKRTree component
   useEffect(() => {
     if (isExpanded && data?.okr_id) {
       // If assigned_users_details is available, use it directly
@@ -288,28 +165,7 @@ const OKRNode = ({ data, isConnectable }) => {
     }
   };
 
-  useEffect(() => {
-    // Check manager relationship when assigned users change and there's a current user
-    const checkManagerRelationship = async () => {
-      if (!data?.currentUser || !assignedUsers.length) return;
-      
-      try {
-        // For each assigned user, get their full details and check if current user is their manager
-        for (const assignedUser of assignedUsers) {
-          const userDetails = await api.getUserByTeamsId(assignedUser.user_id);
-          if (userDetails && userDetails.manager_id === data.currentUser.teams_id) {
-            console.log(`User ${data.currentUser.teams_id} is a manager of assigned user ${assignedUser.user_id}`);
-          }
-        }
-      } catch (error) {
-        console.error('Error checking manager relationship:', error);
-      }
-    };
-
-    if (isExpanded) {
-      checkManagerRelationship();
-    }
-  }, [assignedUsers, data.currentUser, isExpanded]);
+  // Manager relationship check is now handled at the parent component level
     // We've already handled this check in the previous useEffect, so this one is redundant
   /*
   useEffect(() => {
@@ -490,7 +346,12 @@ const OKRNode = ({ data, isConnectable }) => {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setShowEditOKRForm(true);
+                      // Call the global edit OKR handler in OKRTree component
+                      if (typeof window !== 'undefined' && window.__okrTreeEditOKR) {
+                        window.__okrTreeEditOKR(data, assignedUsers);
+                      } else {
+                        console.error('Global __okrTreeEditOKR handler not found');
+                      }
                     }}
                     className="text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded"
                   >
@@ -560,32 +421,6 @@ const OKRNode = ({ data, isConnectable }) => {
           </div>
         )}
       </div>
-        {/* Edit OKR Form Modal */}
-      {showEditOKRForm && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
-          onClick={(e) => e.stopPropagation()}
-          onWheel={(e) => e.stopPropagation()}
-        >
-          <div 
-            className="bg-white p-4 sm:p-6 rounded-lg max-h-[90vh] overflow-y-auto" 
-            style={{ width: "600px", minWidth: "600px" }}
-            onClick={(e) => e.stopPropagation()}
-            onWheel={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg sm:text-xl font-semibold mb-4">
-              Edit OKR: {data.name || data.title}
-            </h3><EditOKRForm 
-              okrData={{...data, assigned_users_details: assignedUsers}}
-              users={users}
-              departments={departments}
-              businessUnits={businessUnits}
-              onSubmit={handleEditOKR}
-              onCancel={() => setShowEditOKRForm(false)}
-            />
-          </div>
-        </div>
-      )}
       
       <Handle
         type="source"

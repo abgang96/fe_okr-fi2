@@ -2,9 +2,7 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/api/auth/microsoft/login": "pages/api/auth/microsoft/login.js",
   "/test-auth": "pages/test-auth.js",
-  "/auth/microsoft-callback": "pages/auth/microsoft-callback.js",
-  "/api/auth/microsoft/token": "pages/api/auth/microsoft/token.js",
-  "/": "pages/index.js"
+  "/": "pages/index.js",
+  "/weekly-discussions": "pages/weekly-discussions.js"
 }

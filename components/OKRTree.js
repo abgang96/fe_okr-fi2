@@ -4,6 +4,7 @@ import 'reactflow/dist/style.css';
 import OKRNode from './tree/OKRNode';
 import AddOKRForm from './forms/AddOKRForm';
 import AddTaskForm from './forms/AddTaskForm';
+import EditOKRForm from './forms/EditOKRForm';
 import api from '../lib/api';
 
 // Register custom node types
@@ -302,6 +303,9 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
   // Track expanded nodes to adjust layout
   const [expandedNodes, setExpandedNodes] = useState({});
+  // Edit OKR form state
+  const [showEditOKRForm, setShowEditOKRForm] = useState(false);
+  const [editOKRData, setEditOKRData] = useState(null);
   
   // User, department, and business unit states  
   const [users, setUsers] = useState([]);
@@ -835,6 +839,27 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
       alert('Failed to create task. Please try again.');
     }
   };
+  
+  // Handle edit OKR form submission
+  const handleEditOKR = async (formData) => {
+    try {
+      const updatedOKR = await api.updateOKR(formData.okrId, formData);
+      
+      // Update the OKR in our state
+      setAllOkrs(prev => 
+        prev.map(okr => okr.okr_id === updatedOKR.okr_id ? updatedOKR : okr)
+      );
+      
+      alert('OKR updated successfully!');
+      setShowEditOKRForm(false);
+      
+      // Refresh the OKRs to update the view
+      fetchOKRs();
+    } catch (error) {
+      console.error('Error updating OKR:', error);
+      alert('Failed to update OKR. Please try again.');
+    }
+  };
     // Add this global handler for Add Sub Objective
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -860,6 +885,25 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
       if (typeof window !== 'undefined') {
         window.__okrTreeAddSubObjective = undefined;
         console.log('Global __okrTreeAddSubObjective handler removed');
+      }
+    };
+  }, []);
+  
+  // Add a global handler for Edit OKR
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.__okrTreeEditOKR = (okrData, assignedUsers) => {
+        console.log('Global __okrTreeEditOKR handler called with data:', okrData);
+        setEditOKRData({...okrData, assigned_users_details: assignedUsers});
+        setShowEditOKRForm(true);
+      };
+    }
+    
+    // Clean up the global handler when the component unmounts
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.__okrTreeEditOKR = undefined;
+        console.log('Global __okrTreeEditOKR handler removed');
       }
     };
   }, []);
@@ -1212,6 +1256,36 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
               onCancel={() => {
                 setShowAddTaskForm(false);
               }}
+            />
+          </div>
+        </div>
+      )}
+      
+      {/* Edit OKR Form Modal */}
+      {showEditOKRForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4 edit-okr-form-modal">
+          <div className="bg-white p-4 sm:p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{zIndex: 9999, position: "relative"}}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg sm:text-xl font-semibold">
+                Edit OKR: {editOKRData?.name || editOKRData?.title}
+              </h3>
+              <button 
+                onClick={() => setShowEditOKRForm(false)} 
+                className="text-gray-500 hover:text-gray-700"
+                aria-label="Close"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <EditOKRForm 
+              okrData={editOKRData}
+              users={users}
+              departments={departments}
+              businessUnits={businessUnits}
+              onSubmit={handleEditOKR}
+              onCancel={() => setShowEditOKRForm(false)}
             />
           </div>
         </div>
