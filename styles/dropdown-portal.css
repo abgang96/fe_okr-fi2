@@ -5,6 +5,9 @@
   z-index: 100000 !important;
   background-color: white !important;
   opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: 0 0 0 9999px rgba(255, 255, 255, 0.2) !important;
 }
 
 /* Make sure the dropdown portal has a proper layering context */
@@ -20,6 +23,11 @@
   z-index: 100001 !important;
 }
 
+/* Additional styling for dropdown items to ensure they're fully opaque */
+.dropdown-menu-portal > div {
+  background-color: white !important;
+}
+
 /* Fixed max height with scrolling */
 .dropdown-menu-portal {
   max-height: 240px;
@@ -31,11 +39,23 @@
   z-index: 100002 !important;
   position: sticky;
   top: 0;
+  background-color: white !important;
 }
 
 /* Prevent event propagation issues */
 .dropdown-menu-portal * {
   pointer-events: auto !important;
+}
+
+/* Style the sticky header fully opaque */
+.dropdown-menu-portal .sticky {
+  background-color: white !important;
+}
+
+/* Add a higher specificity rule to force background to be opaque */
+body .dropdown-menu-portal,
+html .dropdown-menu-portal {
+  background-color: white !important;
 }
 
 /* Fix for responsive views */

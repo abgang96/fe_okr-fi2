@@ -3,6 +3,5 @@
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
   "/test-auth": "pages/test-auth.js",
-  "/": "pages/index.js",
-  "/weekly-discussions": "pages/weekly-discussions.js"
+  "/": "pages/index.js"
 }

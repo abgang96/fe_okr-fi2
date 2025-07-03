@@ -121,17 +121,9 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
     setAvailableUsers(users);
   }, [users]);
 
+  // Removed default user assignment - users will need to be selected manually
   useEffect(() => {
-    if (users.length > 0 && selectedUsers.length === 0) {
-      // Set first user as default selected
-      const defaultUser = {
-        user_id: users[0].user_id,
-        name: users[0].name,
-        is_primary: true
-      };
-      setSelectedUsers([defaultUser]);
-      setPrimaryUserId(users[0].user_id);
-    }
+    // Initialize with empty selection
   }, [users, selectedUsers]);
 
   const validateForm = () => {
@@ -329,6 +321,27 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
         </div>
       </div>
       
+      {/* Measurable Toggle - Moved up before dropdowns */}
+      <div className="mb-4">
+        <label className="flex items-center text-sm font-medium text-gray-700 mb-1 cursor-pointer">
+          <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+            <input 
+              type="checkbox" 
+              name="isMeasurable" 
+              id="isMeasurable" 
+              checked={isMeasurable}
+              onChange={() => setIsMeasurable(!isMeasurable)}
+              className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+            />
+            <label 
+              htmlFor="isMeasurable" 
+              className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
+            ></label>
+          </div>
+          <span>Measurable</span>
+        </label>
+      </div>
+      
       <div className="grid grid-cols-2 gap-4">
         <div className="mb-4 relative dropdown-container" ref={dropdownRef} style={{position: 'relative', zIndex: 30}}>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -354,15 +367,15 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
               top: dropdownRef.current?.getBoundingClientRect().bottom + 'px',
               width: dropdownRef.current?.offsetWidth + 'px',
               zIndex: 100000,
-              backgroundColor: 'white',
-              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+              backgroundColor: '#ffffff',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1), 0 0 0 1000px rgba(255, 255, 255, 0.9) inset',
               borderRadius: '0.375rem',
               border: '1px solid rgba(0, 0, 0, 0.1)',
               maxHeight: '240px',
               overflowY: 'auto'
             }}>
               {/* Search input */}
-              <div className="sticky top-0 bg-white p-2 border-b border-gray-200" style={{backgroundColor: 'white'}}>
+              <div className="sticky top-0 bg-white p-2 border-b border-gray-200" style={{backgroundColor: '#ffffff', position: 'sticky', zIndex: 100010}}>
                 <input
                   type="text"
                   value={searchQuery}
@@ -406,6 +419,7 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
                     <div 
                       key={user.teams_id}
                       className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                      style={{backgroundColor: '#ffffff'}}
                       onClick={() => handleUserSelect(user)}
                     >
                       {user.user_name || user.teams_user_principal_name}
@@ -533,8 +547,8 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
             top: businessUnitDropdownRef.current?.getBoundingClientRect().bottom + 'px',
             width: businessUnitDropdownRef.current?.offsetWidth + 'px',
             zIndex: 100000,
-            backgroundColor: 'white',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+            backgroundColor: '#ffffff',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1), 0 0 0 1000px rgba(255, 255, 255, 0.9) inset',
             borderRadius: '0.375rem',
             border: '1px solid rgba(0, 0, 0, 0.1)',
             maxHeight: '240px',
@@ -551,6 +565,7 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
                   <div 
                     key={unit.business_unit_id}
                     className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                    style={{backgroundColor: '#ffffff'}}
                     onClick={() => {
                       setSelectedBusinessUnits(prev => [...prev, unit]);
                       setShowBusinessUnitDropdown(false);
@@ -562,27 +577,6 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
             )}
           </div>
         )}
-      </div>
-      
-      {/* Measurable Toggle */}
-      <div className="mb-4">
-        <label className="flex items-center text-sm font-medium text-gray-700 mb-1 cursor-pointer">
-          <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-            <input 
-              type="checkbox" 
-              name="isMeasurable" 
-              id="isMeasurable" 
-              checked={isMeasurable}
-              onChange={() => setIsMeasurable(!isMeasurable)}
-              className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
-            />
-            <label 
-              htmlFor="isMeasurable" 
-              className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
-            ></label>
-          </div>
-          <span>Measurable</span>
-        </label>
       </div>
       
       {parentOkrId && (

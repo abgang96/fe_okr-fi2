@@ -9,6 +9,7 @@ const OKRNode = ({ data, isConnectable }) => {
   const [isExpanded, setIsExpanded] = useState(data.isNodeExpanded || false);
   const [assignedUsers, setAssignedUsers] = useState([]);  
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [isUserAssigned, setIsUserAssigned] = useState(false);// Check if current user has edit permission for this OKR
   const hasEditPermission = () => {
     // Give everyone access to edit/delete all OKRs
@@ -398,18 +399,9 @@ const OKRNode = ({ data, isConnectable }) => {
                   </button>
                   
                   <button
-                    onClick={async (e) => {
+                    onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm('Are you sure you want to delete this objective?')) {
-                        try {
-                          await api.deleteOKR(data.okr_id);
-                          alert('OKR deleted successfully');
-                          window.location.reload();
-                        } catch (error) {
-                          console.error('Error deleting OKR:', error);
-                          alert('Failed to delete OKR. Please try again.');
-                        }
-                      }
+                      setShowDeleteConfirmation(true);
                     }}
                     className="text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded"
                   >
@@ -427,6 +419,71 @@ const OKRNode = ({ data, isConnectable }) => {
         position={Position.Bottom}
         isConnectable={isConnectable}
       />
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmation && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
+          onClick={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+        >
+          <div 
+            className="bg-white p-4 sm:p-6 rounded-lg w-full max-w-lg flex flex-col"
+            style={{zIndex: 9999, position: "relative", overflow: "hidden"}}
+            onClick={(e) => e.stopPropagation()}
+            onWheel={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-semibold mb-4">Confirm Deletion</h3>
+            <p className="mb-6 text-gray-600 text-base">
+              Are you sure you want to delete <span className="font-medium">"{data.name || data.title}"</span>?
+              {data.child_okrs && data.child_okrs.length > 0 && (
+                <span className="block mt-3 text-red-600 font-medium">
+                  Warning: This will also delete all {data.child_okrs.length} sub-objective{data.child_okrs.length > 1 ? 's' : ''}!
+                </span>
+              )}
+            </p>
+            <div className="flex flex-col space-y-3 w-full mt-6">
+              <button
+                onClick={() => setShowDeleteConfirmation(false)}
+                className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded w-full"
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await api.deleteOKR(data.okr_id);
+                    setShowDeleteConfirmation(false);
+                    // Use a custom modal for success message instead of alert
+                    // and then reload after a short delay
+                    if (typeof window !== 'undefined' && window.__showTeamsCompatibleAlert) {
+                      window.__showTeamsCompatibleAlert('OKR deleted successfully');
+                      setTimeout(() => window.location.reload(), 1500);
+                    } else {
+                      // Fallback to standard alert for non-Teams environments
+                      alert('OKR deleted successfully');
+                      window.location.reload();
+                    }
+                  } catch (error) {
+                    console.error('Error deleting OKR:', error);
+                    setShowDeleteConfirmation(false);
+                    if (typeof window !== 'undefined' && window.__showTeamsCompatibleAlert) {
+                      window.__showTeamsCompatibleAlert('Failed to delete OKR. Please try again.', 'error');
+                    } else {
+                      alert('Failed to delete OKR. Please try again.');
+                    }
+                  }
+                }}
+                className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded w-full"
+                type="button"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

@@ -5,6 +5,12 @@
       "static/chunks/lib_msalAuth_js.js"
     ]
   },
+  "components\\auth\\TeamsAuthHandler.js -> @microsoft/teams-js": {
+    "id": "components\\auth\\TeamsAuthHandler.js -> @microsoft/teams-js",
+    "files": [
+      "static/chunks/node_modules_microsoft_teams-js_dist_esm_packages_teams-js_src_index_js.js"
+    ]
+  },
   "lib\\apiAuthConfig.js -> ./msalAuth": {
     "id": "lib\\apiAuthConfig.js -> ./msalAuth",
     "files": [
@@ -17,6 +23,12 @@
   },
   "pages\\_app.js -> ../lib/msalAuth": {
     "id": "pages\\_app.js -> ../lib/msalAuth",
+    "files": [
+      "static/chunks/lib_msalAuth_js.js"
+    ]
+  },
+  "pages\\test-auth.js -> ../lib/msalAuth": {
+    "id": "pages\\test-auth.js -> ../lib/msalAuth",
     "files": [
       "static/chunks/lib_msalAuth_js.js"
     ]

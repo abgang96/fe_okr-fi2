@@ -809,11 +809,20 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
         setRootOkrs(prev => [...prev, newOKR]);
       }
       
-      alert('OKR created successfully!');
+      // Use Teams-compatible alert
+      if (typeof window !== 'undefined' && window.__showTeamsCompatibleAlert) {
+        window.__showTeamsCompatibleAlert('OKR created successfully!');
+      } else {
+        alert('OKR created successfully!');
+      }
       setShowAddOKRForm(false);
     } catch (error) {
       console.error('Error creating OKR:', error);
-      alert('Failed to create OKR. Please try again.');
+      if (typeof window !== 'undefined' && window.__showTeamsCompatibleAlert) {
+        window.__showTeamsCompatibleAlert('Failed to create OKR. Please try again.', 'error');
+      } else {
+        alert('Failed to create OKR. Please try again.');
+      }
     }
   };
   
@@ -832,11 +841,20 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
       const newTask = await api.createTask(formData);
       console.log('OKRTree - Task created successfully:', newTask);
       
-      alert('Task created successfully!');
+      // Use Teams-compatible alert
+      if (typeof window !== 'undefined' && window.__showTeamsCompatibleAlert) {
+        window.__showTeamsCompatibleAlert('Task created successfully!');
+      } else {
+        alert('Task created successfully!');
+      }
       setShowAddTaskForm(false);
     } catch (error) {
       console.error('Error creating task:', error);
-      alert('Failed to create task. Please try again.');
+      if (typeof window !== 'undefined' && window.__showTeamsCompatibleAlert) {
+        window.__showTeamsCompatibleAlert('Failed to create task. Please try again.', 'error');
+      } else {
+        alert('Failed to create task. Please try again.');
+      }
     }
   };
   
@@ -850,14 +868,23 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
         prev.map(okr => okr.okr_id === updatedOKR.okr_id ? updatedOKR : okr)
       );
       
-      alert('OKR updated successfully!');
+      // Use Teams-compatible alert instead of browser alert
+      if (typeof window !== 'undefined' && window.__showTeamsCompatibleAlert) {
+        window.__showTeamsCompatibleAlert('OKR updated successfully!');
+      } else {
+        alert('OKR updated successfully!');
+      }
       setShowEditOKRForm(false);
       
       // Refresh the OKRs to update the view
       fetchOKRs();
     } catch (error) {
       console.error('Error updating OKR:', error);
-      alert('Failed to update OKR. Please try again.');
+      if (typeof window !== 'undefined' && window.__showTeamsCompatibleAlert) {
+        window.__showTeamsCompatibleAlert('Failed to update OKR. Please try again.', 'error');
+      } else {
+        alert('Failed to update OKR. Please try again.');
+      }
     }
   };
     // Add this global handler for Add Sub Objective
@@ -904,6 +931,34 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
       if (typeof window !== 'undefined') {
         window.__okrTreeEditOKR = undefined;
         console.log('Global __okrTreeEditOKR handler removed');
+      }
+    };
+  }, []);
+  
+  // Add a global handler for Teams-compatible alerts
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertType, setAlertType] = useState('success'); // success or error
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Create a global handler for showing Teams-compatible alerts
+      window.__showTeamsCompatibleAlert = (message, type = 'success') => {
+        setAlertMessage(message);
+        setAlertType(type);
+        setShowAlert(true);
+        
+        // Auto-hide the alert after 3 seconds
+        setTimeout(() => {
+          setShowAlert(false);
+        }, 3000);
+      };
+    }
+    
+    // Clean up
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.__showTeamsCompatibleAlert = undefined;
       }
     };
   }, []);
@@ -1288,6 +1343,29 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
               onCancel={() => setShowEditOKRForm(false)}
             />
           </div>
+        </div>
+      )}
+      
+      {/* Teams-compatible Alert */}
+      {showAlert && (
+        <div 
+          className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-3 rounded shadow-lg z-[9999] flex items-center ${
+            alertType === 'error' ? 'bg-red-100 border-red-500 text-red-700' : 'bg-green-100 border-green-500 text-green-700'
+          }`}
+          role="alert"
+        >
+          <div className={`mr-2 ${alertType === 'error' ? 'text-red-500' : 'text-green-500'}`}>
+            {alertType === 'error' ? (
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+          </div>
+          <span>{alertMessage}</span>
         </div>
       )}
     </div>
