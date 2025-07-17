@@ -37,7 +37,7 @@ const buildTreeStructure = (okrsList, users = [], currentUser = null, teamMember
     }
   });
   // Find root OKRs (those without a parent_okr)
-  const rootOKRs = okrsList.filter(okr => !okr.parent_okr).sort((a, b) => a.okr_id - b.okr_id);;
+  const rootOKRs = okrsList.filter(okr => !okr.parent_okr).sort((a, b) => a.name.localeCompare(b.name));
   console.log('Root OKRs found:', rootOKRs);
     // Node dimensions and spacing - optimized for expanded nodes
   const nodeWidth = 220; 
@@ -1228,7 +1228,21 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
         <div className="flex justify-center items-center h-64">
           <p className="text-lg text-gray-500">Loading OKRs...</p>
         </div>
-      ) : (      <div className="h-[75vh] sm:h-[80vh] border border-solid border-gray-300 rounded">
+      ) : (
+        <div className="h-[75vh] sm:h-[80vh] border border-solid border-gray-300 rounded relative">
+          {/* Refresh Button */}
+          <button
+            className="absolute top-2 right-2 p-2 bg-blue-600 text-white rounded-full shadow hover:bg-blue-700 z-10 flex items-center justify-center"
+            onClick={() => {
+              setIsLoading(true);
+              fetchOKRs();
+            }}
+            title="Refresh OKR Tree"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
           <ReactFlow
             nodes={nodes}
             edges={edges}

@@ -8,6 +8,7 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState('');
   const [isMeasurable, setIsMeasurable] = useState(false); // Add state for isMeasurable toggle
+  // Always start with no selected users and no primary user
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [primaryUserId, setPrimaryUserId] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -121,10 +122,11 @@ const AddOKRForm = ({ parentOkrId, users = [], departments = [], onSubmit, onCan
     setAvailableUsers(users);
   }, [users]);
 
-  // Removed default user assignment - users will need to be selected manually
+  // Ensure no default user is assigned on mount
   useEffect(() => {
-    // Initialize with empty selection
-  }, [users, selectedUsers]);
+    setSelectedUsers([]);
+    setPrimaryUserId(null);
+  }, [users]);
 
   const validateForm = () => {
     const newErrors = {};
