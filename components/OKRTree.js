@@ -1163,6 +1163,9 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
                         setAssignedToSearch('');
                         setFilteredUsers([]);
                         setShowAssignedToDropdown(false);
+                        setTimeout(() => {
+                          applyFilters();
+                        }, 0);
                       }}
                     >
                       <span className="block truncate">{user.user_name || user.teams_user_principal_name}</span>
