@@ -867,7 +867,10 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
       setAllOkrs(prev => 
         prev.map(okr => okr.okr_id === updatedOKR.okr_id ? updatedOKR : okr)
       );
-      
+
+      setOkrsList(prev =>
+        prev.map(okr => okr.okr_id === updatedOKR.okr_id ? updatedOKR : okr)
+      )
       // Use Teams-compatible alert instead of browser alert
       if (typeof window !== 'undefined' && window.__showTeamsCompatibleAlert) {
         window.__showTeamsCompatibleAlert('OKR updated successfully!');
@@ -877,7 +880,7 @@ function OKRTree({ teamId, departmentId, statusFilter }) {
       setShowEditOKRForm(false);
       
       // Refresh the OKRs to update the view
-      fetchOKRs();
+      // fetchOKRs();
     } catch (error) {
       console.error('Error updating OKR:', error);
       if (typeof window !== 'undefined' && window.__showTeamsCompatibleAlert) {
